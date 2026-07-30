@@ -15,6 +15,27 @@
   --sun: #d7b66b;
   --shadow: 0 26px 80px rgba(48, 73, 64, 0.14);
   --soft-shadow: 0 14px 36px rgba(48, 73, 64, 0.08);
+  --glass-fill: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.68),
+    rgba(255, 255, 255, 0.38)
+  );
+  --glass-fill-soft: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.42),
+    rgba(255, 255, 255, 0.18)
+  );
+  --glass-fill-tint: linear-gradient(
+    180deg,
+    rgba(234, 243, 238, 0.7),
+    rgba(229, 239, 233, 0.34)
+  );
+  --glass-line: rgba(255, 255, 255, 0.62);
+  --glass-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.64),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.22),
+    0 10px 24px rgba(48, 73, 64, 0.055);
+  --glass-blur: saturate(180%) blur(22px);
 }
 
 * {
@@ -121,12 +142,14 @@ button {
 
 .screen-jump {
   min-height: 78px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.58);
+  background: var(--glass-fill-soft);
   padding: 12px;
   text-align: start;
-  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
   cursor: pointer;
   transition:
     transform 160ms ease,
@@ -140,9 +163,11 @@ button {
 }
 
 .screen-jump.active {
-  border-color: rgba(56, 102, 92, 0.3);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: var(--soft-shadow);
+  border-color: rgba(255, 255, 255, 0.78);
+  background: var(--glass-fill);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 12px 26px rgba(48, 73, 64, 0.07);
 }
 
 .screen-jump span {
@@ -248,10 +273,12 @@ button {
   display: inline-grid;
   place-items: center;
   flex: 0 0 auto;
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 10px 24px rgba(48, 73, 64, 0.06);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
   cursor: pointer;
 }
 
@@ -266,12 +293,14 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--glass-fill);
   padding: 13px 14px;
   color: var(--muted);
-  box-shadow: 0 12px 28px rgba(48, 73, 64, 0.06);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
   cursor: pointer;
 }
 
@@ -362,19 +391,25 @@ button {
 
 .chip {
   min-height: 42px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--glass-fill-soft);
   color: #52615a;
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.44);
   font-size: 12px;
   font-weight: 800;
   cursor: pointer;
 }
 
 .chip.active {
-  border-color: rgba(56, 102, 92, 0.18);
-  background: #dfeee8;
+  border-color: rgba(255, 255, 255, 0.74);
+  background: var(--glass-fill-tint);
   color: var(--sage-dark);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.68),
+    0 8px 18px rgba(48, 73, 64, 0.055);
 }
 
 .session-stack {
@@ -388,10 +423,12 @@ button {
 .menu-row,
 .pay-option {
   width: 100%;
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.84);
-  box-shadow: 0 12px 30px rgba(48, 73, 64, 0.06);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
   cursor: pointer;
 }
 
@@ -503,10 +540,14 @@ button {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   border-radius: 8px;
-  background: rgba(232, 238, 233, 0.48);
-  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: var(--glass-fill-soft);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   padding: 4px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.58),
+    0 8px 22px rgba(48, 73, 64, 0.035);
 }
 
 .segmented button {
@@ -521,11 +562,14 @@ button {
 }
 
 .segmented button.selected {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.78);
+  background: var(--glass-fill);
+  border: 1px solid rgba(255, 255, 255, 0.86);
   color: var(--ink);
-  box-shadow: 0 6px 14px rgba(48, 73, 64, 0.045);
-  backdrop-filter: blur(14px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.76),
+    0 7px 16px rgba(48, 73, 64, 0.05);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
 }
 
 .studio-screen {
@@ -732,10 +776,18 @@ button {
 }
 
 .primary-button {
-  border: 0;
-  background: linear-gradient(135deg, #38665c, #577f70);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  background:
+    linear-gradient(180deg, rgba(94, 135, 121, 0.9), rgba(56, 102, 92, 0.82)),
+    rgba(56, 102, 92, 0.76);
   color: #fffdf7;
-  box-shadow: 0 16px 28px rgba(56, 102, 92, 0.18);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+  backdrop-filter: saturate(180%) blur(18px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 14px 28px rgba(56, 102, 92, 0.16);
 }
 
 .primary-button.full {
@@ -756,8 +808,11 @@ button {
 }
 
 .secondary-button {
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--glass-line);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
 }
 
 .ghost-button {
@@ -828,9 +883,11 @@ button {
 }
 
 .terms-row.boxed {
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.74);
+  background: var(--glass-fill-soft);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   padding: 12px;
 }
 
@@ -850,8 +907,11 @@ button {
 }
 
 .pay-option.selected {
-  border-color: rgba(56, 102, 92, 0.22);
-  background: #edf7f1;
+  border-color: rgba(255, 255, 255, 0.78);
+  background: var(--glass-fill-tint);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.68),
+    0 9px 20px rgba(48, 73, 64, 0.06);
 }
 
 .card-preview {
@@ -913,9 +973,12 @@ button {
   display: flex;
   align-items: center;
   gap: 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
   padding: 13px;
   direction: ltr;
 }
@@ -1067,9 +1130,11 @@ button {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 2px;
-  border-top: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(18px);
+  border-top: 1px solid rgba(255, 255, 255, 0.56);
+  background: rgba(255, 255, 255, 0.46);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.54);
   padding: 8px 8px 10px;
 }
 
@@ -1088,8 +1153,12 @@ button {
 }
 
 .bottom-nav button.active {
-  background: #e7f2ed;
+  background: var(--glass-fill-tint);
+  border: 1px solid rgba(255, 255, 255, 0.72);
   color: var(--sage-dark);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 6px 16px rgba(48, 73, 64, 0.055);
 }
 
 @media (max-width: 920px) {

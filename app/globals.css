@@ -46,6 +46,11 @@ html {
   background: var(--paper);
 }
 
+html,
+body {
+  overflow-x: hidden;
+}
+
 body {
   min-height: 100vh;
   margin: 0;
@@ -1193,36 +1198,71 @@ button {
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .aura-stage {
+    min-height: 100dvh;
+    display: block;
     padding: 0;
     background: #fbfaf6;
   }
 
   .prototype-panel {
-    padding: 18px 16px 0;
-  }
-
-  .brand-row h1 {
-    font-size: 38px;
-  }
-
-  .prototype-lead {
-    font-size: 15px;
-    line-height: 1.7;
+    display: none;
   }
 
   .phone-wrap {
+    min-height: 100dvh;
+    display: block;
     gap: 0;
   }
 
   .phone-shell {
-    width: 100%;
-    height: auto;
-    min-height: 760px;
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    min-height: 100dvh;
+    grid-template-rows: calc(32px + env(safe-area-inset-top)) minmax(0, 1fr) calc(72px + env(safe-area-inset-bottom));
     border: 0;
     border-radius: 0;
     box-shadow: none;
+  }
+
+  .phone-status {
+    align-items: end;
+    min-height: calc(32px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) 18px 6px;
+  }
+
+  .app-screen {
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .screen-content {
+    min-height: 100%;
+    padding: 16px 14px 22px;
+  }
+
+  .app-header h2 {
+    font-size: 23px;
+  }
+
+  .chip-row {
+    gap: 6px;
+  }
+
+  .chip {
+    min-height: 40px;
+    padding: 0 4px;
+    font-size: 11px;
+  }
+
+  .bottom-nav {
+    padding: 7px 8px calc(8px + env(safe-area-inset-bottom));
+  }
+
+  .bottom-nav button {
+    min-height: 50px;
   }
 
   .screen-caption {

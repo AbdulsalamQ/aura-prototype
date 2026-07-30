@@ -163,7 +163,23 @@ export default function AuraPrototype() {
 
   return (
     <main className="aura-stage" dir="rtl">
-      <section className="app-shell" aria-label="تطبيق Aura">
+      <section className="desktop-shell" aria-label="تطبيق Aura للكمبيوتر">
+        <DesktopExperience
+          accepted={accepted}
+          activity={activity}
+          bookingTab={bookingTab}
+          onGo={go}
+          payNow={payNow}
+          processing={processing}
+          screen={screen}
+          selectedSession={selectedSession}
+          setAccepted={setAccepted}
+          setActivity={setActivity}
+          setBookingTab={setBookingTab}
+        />
+      </section>
+
+      <section className="app-shell mobile-shell" aria-label="تطبيق Aura للجوال">
         <div className="app-screen">
           {screen === "login" && <LoginScreen onStart={() => go("home")} />}
           {screen === "home" && <HomeScreen onGo={go} />}
@@ -206,6 +222,562 @@ export default function AuraPrototype() {
         <BottomNav current={screen} onGo={go} />
       </section>
     </main>
+  );
+}
+
+function DesktopExperience({
+  accepted,
+  activity,
+  bookingTab,
+  onGo,
+  payNow,
+  processing,
+  screen,
+  selectedSession,
+  setAccepted,
+  setActivity,
+  setBookingTab,
+}: {
+  accepted: boolean;
+  activity: string;
+  bookingTab: string;
+  onGo: (screen: Screen) => void;
+  payNow: () => void;
+  processing: boolean;
+  screen: Screen;
+  selectedSession: Session;
+  setAccepted: (value: boolean) => void;
+  setActivity: (value: string) => void;
+  setBookingTab: (value: string) => void;
+}) {
+  return (
+    <>
+      <DesktopSidebar current={screen} onGo={onGo} />
+      <section className="desktop-main">
+        <DesktopTopbar onGo={onGo} />
+        <div className="desktop-view">
+          {screen === "login" && <DesktopLoginScreen onGo={onGo} />}
+          {screen === "home" && <DesktopHomeScreen onGo={onGo} />}
+          {screen === "explore" && (
+            <DesktopExploreScreen
+              activity={activity}
+              setActivity={setActivity}
+              onGo={onGo}
+            />
+          )}
+          {screen === "studio" && <DesktopStudioScreen onGo={onGo} />}
+          {screen === "schedule" && <DesktopScheduleScreen onGo={onGo} />}
+          {screen === "session" && (
+            <DesktopSurface>
+              <SessionScreen session={selectedSession} onGo={onGo} />
+            </DesktopSurface>
+          )}
+          {screen === "checkout" && (
+            <DesktopSurface>
+              <CheckoutScreen
+                accepted={accepted}
+                setAccepted={setAccepted}
+                session={selectedSession}
+                onGo={onGo}
+              />
+            </DesktopSurface>
+          )}
+          {screen === "payment" && (
+            <DesktopSurface narrow>
+              <PaymentScreen processing={processing} payNow={payNow} />
+            </DesktopSurface>
+          )}
+          {screen === "success" && (
+            <DesktopSurface narrow>
+              <SuccessScreen session={selectedSession} onGo={onGo} />
+            </DesktopSurface>
+          )}
+          {screen === "bookings" && (
+            <DesktopBookingsScreen
+              bookingTab={bookingTab}
+              setBookingTab={setBookingTab}
+              onGo={onGo}
+            />
+          )}
+          {screen === "account" && <DesktopAccountScreen />}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function DesktopSidebar({
+  current,
+  onGo,
+}: {
+  current: Screen;
+  onGo: (screen: Screen) => void;
+}) {
+  const navItems: Array<{ id: Screen; label: string; icon: ReactNode }> = [
+    { id: "home", label: "الرئيسية", icon: <Home size={18} /> },
+    { id: "explore", label: "استكشاف", icon: <Search size={18} /> },
+    { id: "bookings", label: "حجوزاتي", icon: <TicketCheck size={18} /> },
+    { id: "account", label: "حسابي", icon: <UserRound size={18} /> },
+  ];
+
+  return (
+    <aside className="desktop-sidebar">
+      <button className="desktop-brand" onClick={() => onGo("home")} type="button">
+        <span className="brand-mark">A</span>
+        <span>
+          <strong>Aura</strong>
+          <small>حجوزات الحركة</small>
+        </span>
+      </button>
+
+      <nav className="desktop-nav" aria-label="تنقل الكمبيوتر">
+        {navItems.map((item) => (
+          <button
+            className={current === item.id ? "active" : ""}
+            key={item.id}
+            onClick={() => onGo(item.id)}
+            type="button"
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      <div className="desktop-sidebar-card">
+        <span>حجزك القادم</span>
+        <strong>Pilates Reformer</strong>
+        <small>اليوم - 7:00 مساء</small>
+        <button onClick={() => onGo("success")} type="button">
+          عرض الرمز
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+function DesktopTopbar({ onGo }: { onGo: (screen: Screen) => void }) {
+  return (
+    <header className="desktop-topbar">
+      <div>
+        <p>الرياض، حي العليا</p>
+        <h1>مساءك هادئ</h1>
+      </div>
+      <div className="desktop-topbar-actions">
+        <button className="desktop-search" onClick={() => onGo("explore")} type="button">
+          <Search size={17} aria-hidden="true" />
+          <span>ابحث عن مركز أو جلسة</span>
+        </button>
+        <button className="icon-button" type="button" aria-label="الإشعارات" title="الإشعارات">
+          <Bell size={18} aria-hidden="true" />
+        </button>
+        <button className="desktop-user" onClick={() => onGo("account")} type="button">
+          <span className="avatar">ح</span>
+          <span>حصة الدويغري</span>
+        </button>
+      </div>
+    </header>
+  );
+}
+
+function DesktopHomeScreen({ onGo }: { onGo: (screen: Screen) => void }) {
+  const quickIntents = [
+    { label: "اليوم", hint: "جلسات متاحة", icon: <Clock3 size={18} /> },
+    { label: "قريب مني", hint: "حسب الموقع", icon: <MapPin size={18} /> },
+    { label: "مناسب للجميع", hint: "مستوى مريح", icon: <Dumbbell size={18} /> },
+    { label: "الأكثر حجزا", hint: "اختيارات شائعة", icon: <Star size={18} /> },
+  ];
+
+  return (
+    <div className="desktop-home">
+      <section className="desktop-hero-panel">
+        <div>
+          <span className="kicker">حجزك القادم</span>
+          <h2>Pilates Reformer</h2>
+          <p>NOVA Movement - اليوم 7:00 مساء</p>
+          <div className="desktop-hero-actions">
+            <button className="primary-button" onClick={() => onGo("schedule")} type="button">
+              <CalendarDays size={18} aria-hidden="true" />
+              احجز موعد جديد
+            </button>
+            <button className="secondary-button" onClick={() => onGo("bookings")} type="button">
+              <TicketCheck size={18} aria-hidden="true" />
+              حجوزاتي
+            </button>
+          </div>
+        </div>
+        <div className="desktop-hero-image" aria-hidden="true" />
+      </section>
+
+      <div className="desktop-quick-grid">
+        {quickIntents.map((intent) => (
+          <button
+            className="desktop-quick-card"
+            key={intent.label}
+            onClick={() => onGo("explore")}
+            type="button"
+          >
+            {intent.icon}
+            <strong>{intent.label}</strong>
+            <span>{intent.hint}</span>
+          </button>
+        ))}
+      </div>
+
+      <section className="desktop-section">
+        <SectionTitle title="مقترح لك اليوم" action="كل النتائج" onAction={() => onGo("explore")} />
+        <div className="desktop-session-grid">
+          {sessions.map((session) => (
+            <DesktopSessionTile key={session.title} session={session} onGo={onGo} />
+          ))}
+        </div>
+      </section>
+
+      <section className="desktop-section">
+        <SectionTitle title="مراكز قريبة منك" action="استكشف" onAction={() => onGo("explore")} />
+        <div className="desktop-studio-grid">
+          {studios.map((studio) => (
+            <DesktopStudioTile key={studio.name} studio={studio} onGo={onGo} />
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function DesktopExploreScreen({
+  activity,
+  setActivity,
+  onGo,
+}: {
+  activity: string;
+  setActivity: (value: string) => void;
+  onGo: (screen: Screen) => void;
+}) {
+  return (
+    <div className="desktop-two-column">
+      <aside className="desktop-panel desktop-filter-panel">
+        <h2>استكشاف</h2>
+        <p>اختر النشاط ثم افتح ملف المركز للحجز.</p>
+        <div className="input-card">
+          <Search size={18} aria-hidden="true" />
+          <input aria-label="بحث" placeholder="Pilates، Yoga، اسم مركز..." />
+        </div>
+        <FilterGroup
+          label="النشاط"
+          value={activity}
+          options={["الكل", "بيلاتس", "يوغا"]}
+          onChange={setActivity}
+        />
+        <div className="desktop-filter-summary">
+          <span>الترتيب</span>
+          <strong>الأقرب أولاً</strong>
+        </div>
+        <div className="desktop-filter-summary">
+          <span>الفترة</span>
+          <strong>اليوم مساءً</strong>
+        </div>
+      </aside>
+
+      <section className="desktop-panel">
+        <div className="desktop-panel-heading">
+          <div>
+            <span>8 مراكز</span>
+            <h2>نتائج قريبة منك</h2>
+          </div>
+          <button className="secondary-button" type="button">
+            <SlidersHorizontal size={17} aria-hidden="true" />
+            الفلاتر
+          </button>
+        </div>
+        <div className="desktop-studio-grid">
+          {studios.map((studio) => (
+            <DesktopStudioTile key={studio.name} studio={studio} onGo={onGo} />
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function DesktopStudioScreen({ onGo }: { onGo: (screen: Screen) => void }) {
+  return (
+    <div className="desktop-studio-layout">
+      <section className="desktop-panel desktop-studio-detail">
+        <div className="desktop-studio-cover" aria-hidden="true" />
+        <div className="desktop-studio-heading">
+          <div>
+            <span className="kicker">مركز بوتيك</span>
+            <h2>NOVA Movement</h2>
+            <p>
+              <MapPin size={15} aria-hidden="true" />
+              العليا - 2.4 كم
+            </p>
+          </div>
+          <span className="rating-badge">
+            <Star size={14} fill="currentColor" aria-hidden="true" /> 4.8
+          </span>
+        </div>
+        <p className="studio-copy">
+          مركز للحركة الواعية يقدم بيلاتس ويوغا بمستويات مختلفة ومساحات تدريب
+          محدودة العدد.
+        </p>
+        <div className="facility-row" aria-label="المرافق">
+          <span>مواقف</span>
+          <span>غرف تبديل</span>
+          <span>مناشف</span>
+        </div>
+      </section>
+
+      <aside className="desktop-panel desktop-reserve-panel">
+        <span className="kicker">حجز فوري</span>
+        <h3>Pilates Reformer</h3>
+        <p>جلسة جماعية - 50 دقيقة</p>
+        <div className="desktop-price-line">
+          <span>يبدأ من</span>
+          <strong>120 ر.س</strong>
+        </div>
+        <button className="primary-button full" onClick={() => onGo("schedule")} type="button">
+          <CalendarDays size={18} aria-hidden="true" />
+          احجز موعد
+        </button>
+      </aside>
+    </div>
+  );
+}
+
+function DesktopScheduleScreen({ onGo }: { onGo: (screen: Screen) => void }) {
+  const [selectedDay, setSelectedDay] = useState(0);
+  const [selectedTime, setSelectedTime] = useState("04:00 م");
+  const days = buildScheduleDays();
+  const times = [
+    { value: "04:00 م", status: "available" },
+    { value: "04:30 م", status: "available" },
+    { value: "05:00 م", status: "available" },
+    { value: "05:30 م", status: "available" },
+    { value: "06:00 م", status: "booked" },
+    { value: "06:30 م", status: "available" },
+    { value: "07:00 م", status: "available" },
+    { value: "07:30 م", status: "available" },
+    { value: "08:00 م", status: "booked" },
+    { value: "08:30 م", status: "available" },
+    { value: "09:00 م", status: "available" },
+    { value: "09:30 م", status: "booked" },
+    { value: "10:00 م", status: "available" },
+    { value: "10:30 م", status: "available" },
+    { value: "11:00 م", status: "available" },
+  ];
+
+  return (
+    <div className="desktop-booking-layout">
+      <section className="desktop-panel">
+        <div className="desktop-panel-heading">
+          <div>
+            <span>NOVA Movement</span>
+            <h2>تفاصيل الحجز</h2>
+          </div>
+          <b>120 ر.س</b>
+        </div>
+        <div className="day-strip desktop-day-strip" aria-label="اختيار اليوم">
+          {days.map((day, index) => (
+            <button
+              className={selectedDay === index ? "day-pill selected" : "day-pill"}
+              key={`${day.weekday}-${day.date}-${day.month}`}
+              onClick={() => setSelectedDay(index)}
+              type="button"
+            >
+              <span>{day.weekday}</span>
+              <strong>{day.date}</strong>
+              <small>{day.month}</small>
+            </button>
+          ))}
+        </div>
+        <div className="time-section-heading">
+          <h3>الأوقات المتوفرة</h3>
+          <span>
+            <Clock3 size={15} aria-hidden="true" />
+            خلال {days[selectedDay].weekday}
+          </span>
+        </div>
+        <div className="time-slot-grid desktop-time-grid">
+          {times.map((time) => {
+            const isBooked = time.status === "booked";
+            const isSelected = selectedTime === time.value && !isBooked;
+
+            return (
+              <button
+                className={`time-slot ${isBooked ? "booked" : ""} ${
+                  isSelected ? "selected" : ""
+                }`}
+                disabled={isBooked}
+                key={time.value}
+                onClick={() => setSelectedTime(time.value)}
+                type="button"
+              >
+                <strong>{time.value}</strong>
+                {isBooked && <span>محجوز</span>}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <aside className="desktop-panel desktop-reserve-panel">
+        <span className="kicker">ملخص الموعد</span>
+        <h3>Pilates Reformer</h3>
+        <p>{days[selectedDay].weekday} - {selectedTime}</p>
+        <div className="desktop-price-line">
+          <span>الإجمالي</span>
+          <strong>138 ر.س</strong>
+        </div>
+        <button className="primary-button full" onClick={() => onGo("checkout")} type="button">
+          <TicketCheck size={18} aria-hidden="true" />
+          متابعة الحجز
+        </button>
+      </aside>
+    </div>
+  );
+}
+
+function DesktopBookingsScreen({
+  bookingTab,
+  setBookingTab,
+  onGo,
+}: {
+  bookingTab: string;
+  setBookingTab: (value: string) => void;
+  onGo: (screen: Screen) => void;
+}) {
+  return (
+    <div className="desktop-panel">
+      <div className="desktop-panel-heading">
+        <div>
+          <span>حصة الدويغري</span>
+          <h2>حجوزاتي</h2>
+        </div>
+        <div className="segmented desktop-booking-tabs">
+          {["القادمة", "السابقة"].map((item) => (
+            <button
+              className={bookingTab === item ? "selected" : ""}
+              key={item}
+              onClick={() => setBookingTab(item)}
+              type="button"
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      </div>
+      {bookingTab === "القادمة" ? (
+        <div className="desktop-booking-card">
+          <span className="status-pill">مؤكد</span>
+          <h3>Pilates Reformer</h3>
+          <p>NOVA Movement - اليوم 7:00 مساء</p>
+          <button className="secondary-button" onClick={() => onGo("success")} type="button">
+            <TicketCheck size={16} aria-hidden="true" />
+            رمز الحضور
+          </button>
+        </div>
+      ) : (
+        <div className="empty-state">
+          <CalendarDays size={28} aria-hidden="true" />
+          <strong>لا توجد حجوزات سابقة</strong>
+          <span>ستظهر الجلسات المكتملة هنا.</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DesktopAccountScreen() {
+  return (
+    <div className="desktop-two-column">
+      <section className="desktop-panel">
+        <div className="profile-card desktop-profile-card">
+          <div className="avatar">ح</div>
+          <div>
+            <strong>حصة الدويغري</strong>
+            <span>+966 5X XXX 214</span>
+          </div>
+        </div>
+        <div className="desktop-account-grid">
+          {["الملف الشخصي", "المفضلة", "طرق الدفع", "الإشعارات"].map((item) => (
+            <button className="menu-row" key={item} type="button">
+              <span>{item}</span>
+              <ChevronLeft size={17} aria-hidden="true" />
+            </button>
+          ))}
+        </div>
+      </section>
+      <aside className="desktop-panel desktop-reserve-panel">
+        <span className="kicker">الدعم</span>
+        <h3>المساعدة والخصوصية</h3>
+        <p>إدارة وسائل الدفع، الإشعارات، والشروط من مكان واحد.</p>
+      </aside>
+    </div>
+  );
+}
+
+function DesktopLoginScreen({ onGo }: { onGo: (screen: Screen) => void }) {
+  return (
+    <div className="desktop-login-panel">
+      <LoginScreen onStart={() => onGo("home")} />
+    </div>
+  );
+}
+
+function DesktopSurface({
+  children,
+  narrow,
+}: {
+  children: ReactNode;
+  narrow?: boolean;
+}) {
+  return <div className={narrow ? "desktop-surface narrow" : "desktop-surface"}>{children}</div>;
+}
+
+function DesktopSessionTile({
+  session,
+  onGo,
+}: {
+  session: Session;
+  onGo: (screen: Screen) => void;
+}) {
+  return (
+    <button className="desktop-session-tile" onClick={() => onGo("session")} type="button">
+      <div
+        className="desktop-tile-image"
+        style={{ backgroundImage: `url(${session.image})` }}
+        aria-hidden="true"
+      />
+      <div>
+        <span>{session.date} - {session.time}</span>
+        <strong>{session.title}</strong>
+        <p>{session.studio}</p>
+      </div>
+      <b>{session.price} ر.س</b>
+    </button>
+  );
+}
+
+function DesktopStudioTile({
+  studio,
+  onGo,
+}: {
+  studio: (typeof studios)[number];
+  onGo: (screen: Screen) => void;
+}) {
+  return (
+    <button className="desktop-studio-tile" onClick={() => onGo("studio")} type="button">
+      <div className="desktop-studio-thumb" aria-hidden="true" />
+      <div>
+        <span>
+          <Star size={13} fill="currentColor" aria-hidden="true" /> {studio.rating}
+        </span>
+        <strong>{studio.name}</strong>
+        <p>{studio.area} - {studio.distance}</p>
+      </div>
+    </button>
   );
 }
 

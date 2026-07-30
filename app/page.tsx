@@ -52,7 +52,7 @@ type Session = {
 
 const screens: Array<{ id: Screen; label: string; hint: string }> = [
   { id: "login", label: "الدخول", hint: "رقم الجوال والتحقق" },
-  { id: "home", label: "الرئيسية", hint: "جلسات اليوم والمراكز القريبة" },
+  { id: "home", label: "الرئيسية", hint: "حجزك القادم واقتراحات سريعة" },
   { id: "explore", label: "استكشاف", hint: "بحث وفلاتر بسيطة" },
   { id: "studio", label: "المركز", hint: "تفاصيل المركز والجدول" },
   { id: "session", label: "الجلسة", hint: "وقت، مدرب، مستوى، سياسة" },
@@ -124,8 +124,6 @@ const studioSessions = [
     trainer: "دانا",
   },
 ];
-
-const categories = ["بيلاتس", "يوغا", "جلسات خاصة", "جلسات جماعية"];
 
 export default function AuraPrototype() {
   const [screen, setScreen] = useState<Screen>("home");
@@ -284,42 +282,70 @@ function LoginScreen({ onStart }: { onStart: () => void }) {
 }
 
 function HomeScreen({ onGo }: { onGo: (screen: Screen) => void }) {
+  const quickIntents = [
+    { label: "اليوم", hint: "جلسات قريبة", icon: <Clock3 size={17} /> },
+    { label: "قريب مني", hint: "حسب الموقع", icon: <MapPin size={17} /> },
+    { label: "مناسب للجميع", hint: "مستوى مريح", icon: <Dumbbell size={17} /> },
+    { label: "الأكثر حجزا", hint: "اختيارات شائعة", icon: <Star size={17} /> },
+  ];
+
   return (
     <div className="screen-content">
       <AppHeader
-        title="مساء هادئ"
+        title="مساءك هادئ"
         subtitle="الرياض، حي العليا"
         action={<Bell size={18} aria-hidden="true" />}
       />
 
-      <button className="search-bar" onClick={() => onGo("explore")} type="button">
-        <Search size={18} aria-hidden="true" />
-        <span>ابحث عن مركز أو جلسة</span>
-        <SlidersHorizontal size={18} aria-hidden="true" />
+      <button
+        className="home-next-card"
+        onClick={() => onGo("bookings")}
+        type="button"
+      >
+        <div>
+          <span>حجزك القادم</span>
+          <strong>Pilates Reformer</strong>
+          <p>NOVA Movement - اليوم 7:00 مساء</p>
+        </div>
+        <CalendarDays size={22} aria-hidden="true" />
       </button>
 
-      <div className="metric-grid">
-        <InfoTile value="42" label="جلسة متاحة اليوم" />
-        <InfoTile value="18" label="مركز قريب" />
-      </div>
-
-      <SectionTitle title="اختر النشاط" action="عرض الكل" />
-      <div className="chip-row">
-        {categories.map((category, index) => (
-          <button className={index === 0 ? "chip active" : "chip"} key={category}>
-            {category}
+      <SectionTitle
+        title="ابدأ بسرعة"
+        action="بحث متقدم"
+        onAction={() => onGo("explore")}
+      />
+      <div className="quick-intent-grid">
+        {quickIntents.map((intent) => (
+          <button
+            className="quick-intent-card"
+            key={intent.label}
+            onClick={() => onGo("explore")}
+            type="button"
+          >
+            {intent.icon}
+            <strong>{intent.label}</strong>
+            <span>{intent.hint}</span>
           </button>
         ))}
       </div>
 
-      <SectionTitle title="جلسات قريبة" action="استكشاف" />
+      <SectionTitle
+        title="مقترح لك اليوم"
+        action="كل النتائج"
+        onAction={() => onGo("explore")}
+      />
       <div className="session-stack">
         {sessions.slice(0, 2).map((session) => (
           <SessionCard key={session.title} session={session} onGo={onGo} />
         ))}
       </div>
 
-      <SectionTitle title="مراكز مقترحة" action="المزيد" />
+      <SectionTitle
+        title="مراكز قريبة منك"
+        action="استكشف"
+        onAction={() => onGo("explore")}
+      />
       <button className="studio-card" onClick={() => onGo("studio")} type="button">
         <div className="studio-thumb" aria-hidden="true" />
         <div>
@@ -849,11 +875,21 @@ function BottomNav({
   );
 }
 
-function SectionTitle({ title, action }: { title: string; action: string }) {
+function SectionTitle({
+  title,
+  action,
+  onAction,
+}: {
+  title: string;
+  action: string;
+  onAction?: () => void;
+}) {
   return (
     <div className="section-title">
       <h3>{title}</h3>
-      <button type="button">{action}</button>
+      <button onClick={onAction} type="button">
+        {action}
+      </button>
     </div>
   );
 }

@@ -23,7 +23,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 type Screen =
   | "login"
@@ -50,20 +50,6 @@ type Session = {
   trainer: string;
   image: string;
 };
-
-const screens: Array<{ id: Screen; label: string; hint: string }> = [
-  { id: "login", label: "الدخول", hint: "رقم الجوال والتحقق" },
-  { id: "home", label: "الرئيسية", hint: "حجزك القادم واقتراحات سريعة" },
-  { id: "explore", label: "استكشاف", hint: "بحث وفلاتر بسيطة" },
-  { id: "studio", label: "المركز", hint: "ملف المركز والتفاصيل" },
-  { id: "schedule", label: "المواعيد", hint: "اختيار اليوم والوقت" },
-  { id: "session", label: "الجلسة", hint: "وقت، مدرب، مستوى، سياسة" },
-  { id: "checkout", label: "الملخص", hint: "مراجعة قبل الدفع" },
-  { id: "payment", label: "الدفع", hint: "Apple Pay أو بطاقة" },
-  { id: "success", label: "التأكيد", hint: "رقم الحجز ورمز الحضور" },
-  { id: "bookings", label: "حجوزاتي", hint: "القادمة والسابقة" },
-  { id: "account", label: "حسابي", hint: "الملف والدعم والخصوصية" },
-];
 
 const sessions: Session[] = [
   {
@@ -162,11 +148,6 @@ export default function AuraPrototype() {
   const [bookingTab, setBookingTab] = useState("القادمة");
   const selectedSession = sessions[0];
 
-  const currentScreen = useMemo(
-    () => screens.find((item) => item.id === screen) ?? screens[1],
-    [screen],
-  );
-
   function go(nextScreen: Screen) {
     setProcessing(false);
     setScreen(nextScreen);
@@ -182,96 +163,47 @@ export default function AuraPrototype() {
 
   return (
     <main className="aura-stage" dir="rtl">
-      <section className="prototype-panel" aria-label="لوحة تنقل نموذج Aura">
-        <div className="brand-row">
-          <span className="brand-mark">A</span>
-          <div>
-            <p className="eyebrow">Aura prototype</p>
-            <h1>Aura</h1>
-          </div>
+      <section className="app-shell" aria-label="تطبيق Aura">
+        <div className="app-screen">
+          {screen === "login" && <LoginScreen onStart={() => go("home")} />}
+          {screen === "home" && <HomeScreen onGo={go} />}
+          {screen === "explore" && (
+            <ExploreScreen
+              activity={activity}
+              setActivity={setActivity}
+              onGo={go}
+            />
+          )}
+          {screen === "studio" && <StudioScreen onGo={go} />}
+          {screen === "schedule" && <ScheduleScreen onGo={go} />}
+          {screen === "session" && (
+            <SessionScreen session={selectedSession} onGo={go} />
+          )}
+          {screen === "checkout" && (
+            <CheckoutScreen
+              accepted={accepted}
+              setAccepted={setAccepted}
+              session={selectedSession}
+              onGo={go}
+            />
+          )}
+          {screen === "payment" && (
+            <PaymentScreen processing={processing} payNow={payNow} />
+          )}
+          {screen === "success" && (
+            <SuccessScreen session={selectedSession} onGo={go} />
+          )}
+          {screen === "bookings" && (
+            <BookingsScreen
+              bookingTab={bookingTab}
+              setBookingTab={setBookingTab}
+              onGo={go}
+            />
+          )}
+          {screen === "account" && <AccountScreen />}
         </div>
 
-        <p className="prototype-lead">
-          نموذج تفاعلي لتطبيق حجوزات مراكز البيلاتس واليوغا. التصميم محايد
-          للجميع، حديث، ويركز على الحجز السريع من الاكتشاف إلى تأكيد الموعد.
-        </p>
-
-        <div className="screen-list" aria-label="شاشات النموذج">
-          {screens.map((item) => (
-            <button
-              className={`screen-jump ${screen === item.id ? "active" : ""}`}
-              key={item.id}
-              onClick={() => go(item.id)}
-              type="button"
-            >
-              <span>{item.label}</span>
-              <small>{item.hint}</small>
-            </button>
-          ))}
-        </div>
-
-        <div className="flow-card">
-          <TicketCheck size={18} aria-hidden="true" />
-          <div>
-            <strong>مسار التجربة</strong>
-            <p>الرئيسية، تفاصيل الجلسة، ملخص الحجز، الدفع، ثم رمز الحضور.</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="phone-wrap" aria-label="معاينة تطبيق Aura">
-        <div className="phone-shell">
-          <div className="phone-status">
-            <span>9:41</span>
-            <span>Aura</span>
-          </div>
-
-          <div className="app-screen">
-            {screen === "login" && <LoginScreen onStart={() => go("home")} />}
-            {screen === "home" && <HomeScreen onGo={go} />}
-            {screen === "explore" && (
-              <ExploreScreen
-                activity={activity}
-                setActivity={setActivity}
-                onGo={go}
-              />
-            )}
-            {screen === "studio" && <StudioScreen onGo={go} />}
-            {screen === "schedule" && <ScheduleScreen onGo={go} />}
-            {screen === "session" && (
-              <SessionScreen session={selectedSession} onGo={go} />
-            )}
-            {screen === "checkout" && (
-              <CheckoutScreen
-                accepted={accepted}
-                setAccepted={setAccepted}
-                session={selectedSession}
-                onGo={go}
-              />
-            )}
-            {screen === "payment" && (
-              <PaymentScreen processing={processing} payNow={payNow} />
-            )}
-            {screen === "success" && (
-              <SuccessScreen session={selectedSession} onGo={go} />
-            )}
-            {screen === "bookings" && (
-              <BookingsScreen
-                bookingTab={bookingTab}
-                setBookingTab={setBookingTab}
-                onGo={go}
-              />
-            )}
-            {screen === "account" && <AccountScreen />}
-          </div>
-
-          <BottomNav current={screen} onGo={go} />
-        </div>
-
-        <div className="screen-caption">
-          <strong>{currentScreen.label}</strong>
-          <span>{currentScreen.hint}</span>
-        </div>
+        <BottomNav current={screen} onGo={go} />
       </section>
     </main>
   );

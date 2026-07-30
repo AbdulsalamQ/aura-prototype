@@ -17,7 +17,6 @@ import {
   Search,
   ShieldCheck,
   SlidersHorizontal,
-  Sparkles,
   Star,
   TicketCheck,
   UserRound,

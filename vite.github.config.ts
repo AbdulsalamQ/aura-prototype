@@ -5,8 +5,8 @@ export default defineConfig({
   base: "./",
   build: {
     emptyOutDir: true,
-    outDir: "../outputs/aura-aws-webapp",
+    outDir: "../outputs/aura-github-pages",
   },
   plugins: [react()],
-  root: "aws",
+  root: "web",
 });

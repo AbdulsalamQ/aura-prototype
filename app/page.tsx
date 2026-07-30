@@ -507,22 +507,30 @@ function StudioScreen({ onGo }: { onGo: (screen: Screen) => void }) {
 
 function ScheduleScreen({ onGo }: { onGo: (screen: Screen) => void }) {
   const [selectedDay, setSelectedDay] = useState(0);
-  const [selectedTime, setSelectedTime] = useState("7:00 مساء");
+  const [selectedTime, setSelectedTime] = useState("04:00 م");
   const days = buildScheduleDays();
   const times = [
-    { value: "8:00 صباحا", status: "available", seats: "6 مقاعد" },
-    { value: "10:00 صباحا", status: "booked", seats: "محجوز" },
-    { value: "12:30 مساء", status: "available", seats: "4 مقاعد" },
-    { value: "3:00 مساء", status: "booked", seats: "ممتلئ" },
-    { value: "5:30 مساء", status: "available", seats: "3 مقاعد" },
-    { value: "7:00 مساء", status: "available", seats: "4 مقاعد" },
-    { value: "8:30 مساء", status: "booked", seats: "محجوز" },
+    { value: "04:00 م", status: "available" },
+    { value: "04:30 م", status: "available" },
+    { value: "05:00 م", status: "available" },
+    { value: "05:30 م", status: "available" },
+    { value: "06:00 م", status: "booked" },
+    { value: "06:30 م", status: "available" },
+    { value: "07:00 م", status: "available" },
+    { value: "07:30 م", status: "available" },
+    { value: "08:00 م", status: "booked" },
+    { value: "08:30 م", status: "available" },
+    { value: "09:00 م", status: "available" },
+    { value: "09:30 م", status: "booked" },
+    { value: "10:00 م", status: "available" },
+    { value: "10:30 م", status: "available" },
+    { value: "11:00 م", status: "available" },
   ];
 
   return (
     <div className="screen-content schedule-screen">
       <AppHeader
-        title="اختر موعدك"
+        title="تفاصيل الحجز"
         subtitle="NOVA Movement"
         action={<CalendarDays size={18} aria-hidden="true" />}
       />
@@ -535,22 +543,29 @@ function ScheduleScreen({ onGo }: { onGo: (screen: Screen) => void }) {
         <b>120 ر.س</b>
       </div>
 
+      <h3 className="schedule-prompt">متى وقت حجزك؟</h3>
       <div className="day-strip" aria-label="اختيار اليوم">
         {days.map((day, index) => (
           <button
             className={selectedDay === index ? "day-pill selected" : "day-pill"}
-            key={`${day.label}-${day.date}`}
+            key={`${day.weekday}-${day.date}-${day.month}`}
             onClick={() => setSelectedDay(index)}
             type="button"
           >
-            <span>{day.label}</span>
+            <span>{day.weekday}</span>
             <strong>{day.date}</strong>
-            <small>{day.availability}</small>
+            <small>{day.month}</small>
           </button>
         ))}
       </div>
 
-      <SectionTitle title="الأوقات المتاحة" action={days[selectedDay].label} />
+      <div className="time-section-heading">
+        <h3>الأوقات المتوفرة</h3>
+        <span>
+          <Clock3 size={15} aria-hidden="true" />
+          خلال {days[selectedDay].weekday}
+        </span>
+      </div>
       <div className="time-slot-grid">
         {times.map((time) => {
           const isBooked = time.status === "booked";
@@ -567,7 +582,7 @@ function ScheduleScreen({ onGo }: { onGo: (screen: Screen) => void }) {
               type="button"
             >
               <strong>{time.value}</strong>
-              <span>{time.seats}</span>
+              {isBooked && <span>محجوز</span>}
             </button>
           );
         })}
@@ -1122,20 +1137,24 @@ function PriceLine({
 }
 
 function buildScheduleDays() {
-  const formatter = new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
+  const weekdayFormatter = new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
     weekday: "short",
-    day: "numeric",
+  });
+  const dayFormatter = new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
+    day: "2-digit",
+  });
+  const monthFormatter = new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
+    month: "long",
   });
 
   return Array.from({ length: 7 }).map((_, index) => {
     const date = new Date();
     date.setDate(date.getDate() + index);
-    const [weekday, day] = formatter.format(date).split("، ");
 
     return {
-      label: index === 0 ? "اليوم" : index === 1 ? "غدا" : weekday,
-      date: day ?? formatter.format(date),
-      availability: index === 2 || index === 5 ? "3 أوقات" : "5 أوقات",
+      weekday: weekdayFormatter.format(date),
+      date: dayFormatter.format(date),
+      month: monthFormatter.format(date),
     };
   });
 }

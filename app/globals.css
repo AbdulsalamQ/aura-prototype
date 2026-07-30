@@ -829,6 +829,7 @@ button {
 .schedule-screen {
   display: flex;
   flex-direction: column;
+  padding-bottom: 96px;
 }
 
 .schedule-studio-summary {
@@ -836,13 +837,8 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border: 1px solid var(--glass-line);
-  border-radius: 8px;
-  background: var(--glass-fill);
-  padding: 14px;
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-  box-shadow: var(--glass-shadow);
+  border-bottom: 1px solid rgba(44, 63, 57, 0.08);
+  padding: 0 2px 12px;
 }
 
 .schedule-studio-summary span {
@@ -854,8 +850,8 @@ button {
 
 .schedule-studio-summary strong {
   display: block;
-  margin-top: 5px;
-  font-size: 16px;
+  margin-top: 3px;
+  font-size: 15px;
 }
 
 .schedule-studio-summary b {
@@ -863,12 +859,19 @@ button {
   white-space: nowrap;
 }
 
+.schedule-prompt {
+  margin: 20px 0 10px;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
 .day-strip {
   display: flex;
-  gap: 8px;
-  margin: 16px -16px 6px;
+  gap: 9px;
+  margin: 0 -16px 18px;
   overflow-x: auto;
-  padding: 0 16px 6px;
+  padding: 0 16px 8px;
+  scroll-padding-inline: 16px;
   scrollbar-width: none;
 }
 
@@ -877,11 +880,11 @@ button {
 }
 
 .day-pill {
-  min-width: 82px;
-  min-height: 84px;
+  flex: 0 0 64px;
+  min-height: 86px;
   display: grid;
   place-items: center;
-  gap: 3px;
+  gap: 5px;
   border: 1px solid var(--glass-line);
   border-radius: 8px;
   background: var(--glass-fill-soft);
@@ -894,62 +897,102 @@ button {
 
 .day-pill span,
 .day-pill small {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
 }
 
 .day-pill strong {
   color: var(--ink);
-  font-size: 20px;
+  font-size: 23px;
+  line-height: 1;
 }
 
 .day-pill.selected {
   border-color: rgba(255, 255, 255, 0.82);
-  background: var(--glass-fill-tint);
-  color: var(--sage-dark);
+  background:
+    linear-gradient(180deg, rgba(83, 126, 112, 0.96), rgba(56, 102, 92, 0.88)),
+    rgba(56, 102, 92, 0.84);
+  color: #fffdf7;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 10px 22px rgba(48, 73, 64, 0.06);
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 14px 28px rgba(56, 102, 92, 0.16);
+}
+
+.day-pill.selected strong,
+.day-pill.selected small {
+  color: #fffdf7;
+}
+
+.time-section-heading {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  margin: 8px 0 14px;
+}
+
+.time-section-heading h3 {
+  margin: 0;
+  font-size: 21px;
+}
+
+.time-section-heading span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .time-slot-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 .time-slot {
-  min-height: 74px;
+  min-height: 48px;
   display: grid;
   align-content: center;
-  gap: 5px;
+  justify-items: center;
+  gap: 2px;
   border: 1px solid var(--glass-line);
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--glass-fill);
   color: var(--ink);
+  padding: 8px 6px;
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
   box-shadow: var(--glass-shadow);
   cursor: pointer;
 }
 
+.time-slot strong {
+  font-size: 17px;
+  line-height: 1;
+}
+
 .time-slot span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
 }
 
 .time-slot.selected {
   border-color: rgba(255, 255, 255, 0.84);
   background:
-    linear-gradient(180deg, rgba(234, 243, 238, 0.86), rgba(229, 239, 233, 0.48)),
-    rgba(255, 255, 255, 0.38);
-  color: var(--sage-dark);
+    linear-gradient(180deg, rgba(83, 126, 112, 0.92), rgba(56, 102, 92, 0.82)),
+    rgba(56, 102, 92, 0.74);
+  color: #fffdf7;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 12px 24px rgba(56, 102, 92, 0.14);
 }
 
 .time-slot.booked {
   cursor: not-allowed;
-  background: rgba(225, 226, 220, 0.46);
+  background: rgba(225, 226, 220, 0.5);
   color: rgba(120, 129, 123, 0.7);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
 }

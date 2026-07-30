@@ -765,14 +765,14 @@ function AccountScreen() {
     <div className="screen-content">
       <AppHeader
         title="حسابي"
-        subtitle="محمد العبدالله"
+        subtitle="حصة الدويغري"
         action={<CircleUserRound size={18} aria-hidden="true" />}
       />
 
       <div className="profile-card">
-        <div className="avatar">م</div>
+        <div className="avatar">ح</div>
         <div>
-          <strong>محمد العبدالله</strong>
+          <strong>حصة الدويغري</strong>
           <span>+966 5X XXX 214</span>
         </div>
       </div>

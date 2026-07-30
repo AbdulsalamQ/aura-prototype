@@ -30,6 +30,7 @@ type Screen =
   | "home"
   | "explore"
   | "studio"
+  | "schedule"
   | "session"
   | "checkout"
   | "payment"
@@ -54,7 +55,8 @@ const screens: Array<{ id: Screen; label: string; hint: string }> = [
   { id: "login", label: "الدخول", hint: "رقم الجوال والتحقق" },
   { id: "home", label: "الرئيسية", hint: "حجزك القادم واقتراحات سريعة" },
   { id: "explore", label: "استكشاف", hint: "بحث وفلاتر بسيطة" },
-  { id: "studio", label: "المركز", hint: "تفاصيل المركز والجدول" },
+  { id: "studio", label: "المركز", hint: "ملف المركز والتفاصيل" },
+  { id: "schedule", label: "المواعيد", hint: "اختيار اليوم والوقت" },
   { id: "session", label: "الجلسة", hint: "وقت، مدرب، مستوى، سياسة" },
   { id: "checkout", label: "الملخص", hint: "مراجعة قبل الدفع" },
   { id: "payment", label: "الدفع", hint: "Apple Pay أو بطاقة" },
@@ -125,10 +127,36 @@ const studioSessions = [
   },
 ];
 
+const studios = [
+  {
+    name: "NOVA Movement",
+    rating: "4.8",
+    area: "العليا",
+    distance: "2.4 كم",
+    tags: "بيلاتس، يوغا، جلسات خاصة",
+    price: "يبدأ من 80 ر.س",
+  },
+  {
+    name: "Flow House",
+    rating: "4.7",
+    area: "الملقا",
+    distance: "4.1 كم",
+    tags: "يوغا، Vinyasa، جلسات جماعية",
+    price: "يبدأ من 90 ر.س",
+  },
+  {
+    name: "Balance Studio",
+    rating: "4.6",
+    area: "النخيل",
+    distance: "5.8 كم",
+    tags: "Mat Pilates، بيلاتس للمبتدئين",
+    price: "يبدأ من 75 ر.س",
+  },
+];
+
 export default function AuraPrototype() {
   const [screen, setScreen] = useState<Screen>("home");
   const [activity, setActivity] = useState("الكل");
-  const [period, setPeriod] = useState("اليوم");
   const [accepted, setAccepted] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [bookingTab, setBookingTab] = useState("القادمة");
@@ -204,13 +232,12 @@ export default function AuraPrototype() {
             {screen === "explore" && (
               <ExploreScreen
                 activity={activity}
-                period={period}
                 setActivity={setActivity}
-                setPeriod={setPeriod}
                 onGo={go}
               />
             )}
             {screen === "studio" && <StudioScreen onGo={go} />}
+            {screen === "schedule" && <ScheduleScreen onGo={go} />}
             {screen === "session" && (
               <SessionScreen session={selectedSession} onGo={go} />
             )}
@@ -365,15 +392,11 @@ function HomeScreen({ onGo }: { onGo: (screen: Screen) => void }) {
 
 function ExploreScreen({
   activity,
-  period,
   setActivity,
-  setPeriod,
   onGo,
 }: {
   activity: string;
-  period: string;
   setActivity: (value: string) => void;
-  setPeriod: (value: string) => void;
   onGo: (screen: Screen) => void;
 }) {
   return (
@@ -395,21 +418,15 @@ function ExploreScreen({
         options={["الكل", "بيلاتس", "يوغا"]}
         onChange={setActivity}
       />
-      <FilterGroup
-        label="اليوم"
-        value={period}
-        options={["اليوم", "غدا", "هذا الأسبوع"]}
-        onChange={setPeriod}
-      />
 
       <div className="result-header">
-        <strong>24 نتيجة</strong>
-        <span>مرتبة حسب الأقرب</span>
+        <strong>8 مراكز</strong>
+        <span>الأقرب أولاً</span>
       </div>
 
-      <div className="session-stack">
-        {sessions.map((session) => (
-          <SessionCard key={session.title} session={session} onGo={onGo} />
+      <div className="studio-result-list">
+        {studios.map((studio) => (
+          <StudioResultCard key={studio.name} studio={studio} onGo={onGo} />
         ))}
       </div>
     </div>
@@ -463,28 +480,103 @@ function StudioScreen({ onGo }: { onGo: (screen: Screen) => void }) {
         <span>مناشف</span>
       </div>
 
-      <SectionTitle title="الجلسات القادمة" action="الأسبوع" />
-      <div className="time-list">
-        {studioSessions.map((session) => (
+      <SectionTitle title="معلومات الحجز" action="حجز فوري" />
+      <div className="studio-profile-grid">
+        <MiniStat icon={<Clock3 size={16} />} label="7:00 ص - 10:00 م" />
+        <MiniStat icon={<Dumbbell size={16} />} label="بيلاتس ويوغا" />
+        <MiniStat icon={<UserRound size={16} />} label="6 مدربين" />
+        <MiniStat icon={<TicketCheck size={16} />} label="حجز فوري" />
+      </div>
+
+      <section className="plain-section">
+        <h3>عن المركز</h3>
+        <p>
+          ملف المركز يجمع المعلومات الأساسية قبل الحجز: نوع الجلسات، مستوى
+          التجربة، المرافق، والموقع. اختَر الحجز عندما تكون مستعدًا لاختيار
+          اليوم والوقت.
+        </p>
+      </section>
+
+      <button className="primary-button sticky" onClick={() => onGo("schedule")}>
+        <CalendarDays size={18} aria-hidden="true" />
+        احجز موعد
+      </button>
+    </div>
+  );
+}
+
+function ScheduleScreen({ onGo }: { onGo: (screen: Screen) => void }) {
+  const [selectedDay, setSelectedDay] = useState(0);
+  const [selectedTime, setSelectedTime] = useState("7:00 مساء");
+  const days = buildScheduleDays();
+  const times = [
+    { value: "8:00 صباحا", status: "available", seats: "6 مقاعد" },
+    { value: "10:00 صباحا", status: "booked", seats: "محجوز" },
+    { value: "12:30 مساء", status: "available", seats: "4 مقاعد" },
+    { value: "3:00 مساء", status: "booked", seats: "ممتلئ" },
+    { value: "5:30 مساء", status: "available", seats: "3 مقاعد" },
+    { value: "7:00 مساء", status: "available", seats: "4 مقاعد" },
+    { value: "8:30 مساء", status: "booked", seats: "محجوز" },
+  ];
+
+  return (
+    <div className="screen-content schedule-screen">
+      <AppHeader
+        title="اختر موعدك"
+        subtitle="NOVA Movement"
+        action={<CalendarDays size={18} aria-hidden="true" />}
+      />
+
+      <div className="schedule-studio-summary">
+        <div>
+          <span>Pilates Reformer</span>
+          <strong>جلسة جماعية - 50 دقيقة</strong>
+        </div>
+        <b>120 ر.س</b>
+      </div>
+
+      <div className="day-strip" aria-label="اختيار اليوم">
+        {days.map((day, index) => (
           <button
-            className="time-card"
-            key={`${session.title}-${session.time}`}
-            onClick={() => onGo("session")}
+            className={selectedDay === index ? "day-pill selected" : "day-pill"}
+            key={`${day.label}-${day.date}`}
+            onClick={() => setSelectedDay(index)}
             type="button"
           >
-            <div>
-              <strong>{session.title}</strong>
-              <span>
-                {session.trainer} - {session.level}
-              </span>
-            </div>
-            <div className="time-meta">
-              <b>{session.time}</b>
-              <small>{session.seats} مقاعد</small>
-            </div>
+            <span>{day.label}</span>
+            <strong>{day.date}</strong>
+            <small>{day.availability}</small>
           </button>
         ))}
       </div>
+
+      <SectionTitle title="الأوقات المتاحة" action={days[selectedDay].label} />
+      <div className="time-slot-grid">
+        {times.map((time) => {
+          const isBooked = time.status === "booked";
+          const isSelected = selectedTime === time.value && !isBooked;
+
+          return (
+            <button
+              className={`time-slot ${isBooked ? "booked" : ""} ${
+                isSelected ? "selected" : ""
+              }`}
+              disabled={isBooked}
+              key={time.value}
+              onClick={() => setSelectedTime(time.value)}
+              type="button"
+            >
+              <strong>{time.value}</strong>
+              <span>{time.seats}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <button className="primary-button sticky" onClick={() => onGo("checkout")}>
+        <TicketCheck size={18} aria-hidden="true" />
+        متابعة الحجز
+      </button>
     </div>
   );
 }
@@ -936,6 +1028,37 @@ function SessionCard({
   );
 }
 
+function StudioResultCard({
+  studio,
+  onGo,
+}: {
+  studio: (typeof studios)[number];
+  onGo: (screen: Screen) => void;
+}) {
+  return (
+    <button className="studio-result-card" onClick={() => onGo("studio")} type="button">
+      <div className="studio-result-image" aria-hidden="true" />
+      <div className="studio-result-copy">
+        <div className="studio-line">
+          <strong>{studio.name}</strong>
+          <span>
+            <Star size={13} fill="currentColor" aria-hidden="true" />{" "}
+            {studio.rating}
+          </span>
+        </div>
+        <p>{studio.tags}</p>
+        <div className="studio-result-meta">
+          <span>
+            <MapPin size={14} aria-hidden="true" />
+            {studio.area} - {studio.distance}
+          </span>
+          <b>{studio.price}</b>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 function FilterGroup({
   label,
   value,
@@ -996,4 +1119,23 @@ function PriceLine({
       <strong>{value}</strong>
     </div>
   );
+}
+
+function buildScheduleDays() {
+  const formatter = new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
+    weekday: "short",
+    day: "numeric",
+  });
+
+  return Array.from({ length: 7 }).map((_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() + index);
+    const [weekday, day] = formatter.format(date).split("، ");
+
+    return {
+      label: index === 0 ? "اليوم" : index === 1 ? "غدا" : weekday,
+      date: day ?? formatter.format(date),
+      availability: index === 2 || index === 5 ? "3 أوقات" : "5 أوقات",
+    };
+  });
 }

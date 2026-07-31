@@ -52,7 +52,7 @@ body {
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   background:
     linear-gradient(135deg, #fbfaf6 0%, #eef4ee 48%, #f7efe8 100%),
@@ -72,26 +72,28 @@ button {
 }
 
 .aura-stage {
-  min-height: 100dvh;
+  width: 100vw;
+  height: 100dvh;
   display: flex;
   align-items: stretch;
   justify-content: center;
-  padding: 22px;
+  overflow: hidden;
+  padding: 0;
 }
 
 .app-shell {
-  width: min(100%, 1120px);
-  height: calc(100dvh - 44px);
-  min-height: calc(100dvh - 44px);
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
   display: grid;
   grid-template-rows: minmax(0, 1fr) 82px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: 24px;
+  border: 0;
+  border-radius: 0;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.46)),
     #fbfaf6;
-  box-shadow: var(--shadow);
+  box-shadow: none;
 }
 
 .desktop-shell {
@@ -120,17 +122,17 @@ button {
 }
 
 .desktop-shell {
-  width: min(100%, 1180px);
-  height: calc(100dvh - 44px);
-  min-height: 720px;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
   overflow: hidden;
   direction: ltr;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: 24px;
+  border: 0;
+  border-radius: 0;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.46)),
     #fbfaf6;
-  box-shadow: var(--shadow);
+  box-shadow: none;
 }
 
 .desktop-sidebar {

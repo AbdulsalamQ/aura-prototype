@@ -38,7 +38,25 @@ type Screen =
   | "bookings"
   | "account";
 
+type Studio = {
+  id: string;
+  name: string;
+  rating: string;
+  area: string;
+  distance: string;
+  tags: string;
+  price: string;
+  address: string;
+  hours: string;
+  phone: string;
+  facilities: string[];
+  image: string;
+  mapQuery: string;
+};
+
 type Session = {
+  id: string;
+  studioId: string;
   title: string;
   studio: string;
   area: string;
@@ -49,10 +67,92 @@ type Session = {
   level: string;
   trainer: string;
   image: string;
+  duration: string;
+  category: string;
+  description: string;
 };
+
+type BookingStatus = "confirmed" | "cancelled";
+
+type BookingRecord = {
+  id: string;
+  sessionId: string;
+  status: BookingStatus;
+  createdAt: string;
+};
+
+type AuraActions = {
+  selectedStudio: Studio;
+  selectedSession: Session;
+  favoriteStudioIds: string[];
+  booking: BookingRecord | null;
+  paymentMethod: string;
+  selectStudio: (studioId: string) => void;
+  selectSession: (sessionId: string) => void;
+  startBooking: (sessionId?: string) => void;
+  toggleFavorite: (studioId: string) => void;
+  openMaps: (studio: Studio, mode?: "search" | "directions") => void;
+  addToCalendar: () => void;
+  cancelBooking: () => void;
+  notify: (message: string) => void;
+  setPaymentMethod: (value: string) => void;
+};
+
+const studios: Studio[] = [
+  {
+    id: "nova",
+    name: "NOVA Movement",
+    rating: "4.8",
+    area: "العليا",
+    distance: "2.4 كم",
+    tags: "بيلاتس، يوغا، جلسات خاصة",
+    price: "يبدأ من 80 ر.س",
+    address: "حي العليا، الرياض",
+    hours: "7:00 ص - 10:00 م",
+    phone: "+966 5X XXX 018",
+    facilities: ["مواقف", "غرف تبديل", "مناشف"],
+    image:
+      "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1200&q=80",
+    mapQuery: "NOVA Movement Pilates Yoga Al Olaya Riyadh",
+  },
+  {
+    id: "flow",
+    name: "Flow House",
+    rating: "4.7",
+    area: "الملقا",
+    distance: "4.1 كم",
+    tags: "يوغا، Vinyasa، جلسات جماعية",
+    price: "يبدأ من 90 ر.س",
+    address: "حي الملقا، الرياض",
+    hours: "8:00 ص - 11:00 م",
+    phone: "+966 5X XXX 442",
+    facilities: ["جلسات جماعية", "خزائن", "قهوة"],
+    image:
+      "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1200&q=80",
+    mapQuery: "Flow House Yoga Al Malqa Riyadh",
+  },
+  {
+    id: "balance",
+    name: "Balance Studio",
+    rating: "4.6",
+    area: "النخيل",
+    distance: "5.8 كم",
+    tags: "Mat Pilates، بيلاتس للمبتدئين",
+    price: "يبدأ من 75 ر.س",
+    address: "حي النخيل، الرياض",
+    hours: "6:00 ص - 9:30 م",
+    phone: "+966 5X XXX 730",
+    facilities: ["مناسب للمبتدئين", "معدات بيلاتس", "مواقف"],
+    image:
+      "https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?auto=format&fit=crop&w=1200&q=80",
+    mapQuery: "Balance Studio Pilates Al Nakheel Riyadh",
+  },
+];
 
 const sessions: Session[] = [
   {
+    id: "nova-reformer",
+    studioId: "nova",
     title: "Pilates Reformer",
     studio: "NOVA Movement",
     area: "العليا",
@@ -64,8 +164,14 @@ const sessions: Session[] = [
     trainer: "ليان",
     image:
       "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1000&q=80",
+    duration: "50 دقيقة",
+    category: "بيلاتس",
+    description:
+      "جلسة Reformer تركّز على القوة، الاتزان، والتنفس بإيقاع مريح وعدد مقاعد محدود.",
   },
   {
+    id: "flow-vinyasa",
+    studioId: "flow",
     title: "Vinyasa Yoga",
     studio: "Flow House",
     area: "الملقا",
@@ -77,8 +183,14 @@ const sessions: Session[] = [
     trainer: "رامي",
     image:
       "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1000&q=80",
+    duration: "60 دقيقة",
+    category: "يوغا",
+    description:
+      "تدفق يوغا متوسط السرعة يوازن بين المرونة والتنفس والحركة المستمرة.",
   },
   {
+    id: "balance-mat",
+    studioId: "balance",
     title: "Mat Pilates",
     studio: "Balance Studio",
     area: "النخيل",
@@ -90,55 +202,76 @@ const sessions: Session[] = [
     trainer: "سارة",
     image:
       "https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?auto=format&fit=crop&w=1000&q=80",
+    duration: "45 دقيقة",
+    category: "بيلاتس",
+    description:
+      "جلسة Mat Pilates هادئة للمبتدئين تركّز على الثبات، العضلات العميقة، والتحكم.",
   },
-];
-
-const studioSessions = [
-  sessions[0],
   {
-    ...sessions[2],
+    id: "nova-core",
+    studioId: "nova",
     title: "Core Strength",
+    studio: "NOVA Movement",
+    area: "العليا",
     time: "5:45 مساء",
+    date: "غدا",
     price: 105,
     seats: 2,
+    level: "متوسط",
     trainer: "نواف",
+    image:
+      "https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?auto=format&fit=crop&w=1000&q=80",
+    duration: "45 دقيقة",
+    category: "بيلاتس",
+    description:
+      "تمارين مركزة للجزء الأوسط من الجسم مع انتقالات بسيطة ومناسبة لمن يبحث عن قوة أعلى.",
   },
   {
-    ...sessions[1],
+    id: "flow-slow",
+    studioId: "flow",
     title: "Slow Flow Yoga",
+    studio: "Flow House",
+    area: "الملقا",
     time: "9:00 مساء",
+    date: "غدا",
     price: 90,
     seats: 8,
+    level: "مناسب للجميع",
     trainer: "دانا",
+    image:
+      "https://images.unsplash.com/photo-1540206276207-3af25c08abc4?auto=format&fit=crop&w=1000&q=80",
+    duration: "55 دقيقة",
+    category: "يوغا",
+    description:
+      "جلسة يوغا مسائية بوتيرة أبطأ تساعد على الاسترخاء وفك الشد العضلي.",
   },
 ];
 
-const studios = [
-  {
-    name: "NOVA Movement",
-    rating: "4.8",
-    area: "العليا",
-    distance: "2.4 كم",
-    tags: "بيلاتس، يوغا، جلسات خاصة",
-    price: "يبدأ من 80 ر.س",
-  },
-  {
-    name: "Flow House",
-    rating: "4.7",
-    area: "الملقا",
-    distance: "4.1 كم",
-    tags: "يوغا، Vinyasa، جلسات جماعية",
-    price: "يبدأ من 90 ر.س",
-  },
-  {
-    name: "Balance Studio",
-    rating: "4.6",
-    area: "النخيل",
-    distance: "5.8 كم",
-    tags: "Mat Pilates، بيلاتس للمبتدئين",
-    price: "يبدأ من 75 ر.س",
-  },
-];
+function getStudioById(studioId: string) {
+  return studios.find((studio) => studio.id === studioId) ?? studios[0];
+}
+
+function getSessionById(sessionId: string) {
+  return sessions.find((session) => session.id === sessionId) ?? sessions[0];
+}
+
+function buildMapsUrl(studio: Studio, mode: "search" | "directions" = "search") {
+  const encodedQuery = encodeURIComponent(studio.mapQuery);
+  if (mode === "directions") {
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodedQuery}`;
+  }
+  return `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
+}
+
+function buildCalendarUrl(session: Session, studio: Studio) {
+  const text = encodeURIComponent(`${session.title} - Aura`);
+  const location = encodeURIComponent(studio.address);
+  const details = encodeURIComponent(
+    `${studio.name} | ${session.trainer} | ${session.duration}`,
+  );
+
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&location=${location}&details=${details}`;
+}
 
 export default function AuraPrototype() {
   const [screen, setScreen] = useState<Screen>("home");
@@ -146,20 +279,114 @@ export default function AuraPrototype() {
   const [accepted, setAccepted] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [bookingTab, setBookingTab] = useState("القادمة");
-  const selectedSession = sessions[0];
+  const [selectedStudioId, setSelectedStudioId] = useState("nova");
+  const [selectedSessionId, setSelectedSessionId] = useState("nova-reformer");
+  const [favoriteStudioIds, setFavoriteStudioIds] = useState<string[]>(["nova"]);
+  const [paymentMethod, setPaymentMethod] = useState("Apple Pay");
+  const [booking, setBooking] = useState<BookingRecord | null>({
+    id: "AUR-2481",
+    sessionId: "nova-reformer",
+    status: "confirmed",
+    createdAt: "2026-08-01T19:00:00+03:00",
+  });
+  const [toast, setToast] = useState<string | null>(null);
+  const selectedStudio = getStudioById(selectedStudioId);
+  const selectedSession = getSessionById(selectedSessionId);
 
   function go(nextScreen: Screen) {
     setProcessing(false);
     setScreen(nextScreen);
   }
 
+  function notify(message: string) {
+    setToast(message);
+    window.setTimeout(() => setToast(null), 1800);
+  }
+
+  function selectStudio(studioId: string) {
+    const nextSession = sessions.find((session) => session.studioId === studioId) ?? sessions[0];
+    setSelectedStudioId(studioId);
+    setSelectedSessionId(nextSession.id);
+    setScreen("studio");
+  }
+
+  function selectSession(sessionId: string) {
+    const nextSession = getSessionById(sessionId);
+    setSelectedStudioId(nextSession.studioId);
+    setSelectedSessionId(nextSession.id);
+    setScreen("session");
+  }
+
+  function startBooking(sessionId = selectedSessionId) {
+    const nextSession = getSessionById(sessionId);
+    setSelectedStudioId(nextSession.studioId);
+    setSelectedSessionId(nextSession.id);
+    setAccepted(false);
+    setScreen("schedule");
+  }
+
+  function toggleFavorite(studioId: string) {
+    setFavoriteStudioIds((current) => {
+      const isSaved = current.includes(studioId);
+      notify(isSaved ? "تمت إزالة المركز من المفضلة" : "تمت إضافة المركز للمفضلة");
+      return isSaved ? current.filter((id) => id !== studioId) : [...current, studioId];
+    });
+  }
+
+  function openMaps(studio: Studio, mode: "search" | "directions" = "directions") {
+    window.open(buildMapsUrl(studio, mode), "_blank", "noopener,noreferrer");
+  }
+
+  function addToCalendar() {
+    window.open(
+      buildCalendarUrl(selectedSession, getStudioById(selectedSession.studioId)),
+      "_blank",
+      "noopener,noreferrer",
+    );
+  }
+
+  function cancelBooking() {
+    setBooking((current) => ({
+      id: current?.id ?? "AUR-2481",
+      sessionId: current?.sessionId ?? selectedSession.id,
+      status: "cancelled",
+      createdAt: current?.createdAt ?? new Date().toISOString(),
+    }));
+    setBookingTab("السابقة");
+    notify("تم إلغاء الحجز في البروتوتايب");
+  }
+
   function payNow() {
     setProcessing(true);
     window.setTimeout(() => {
+      setBooking({
+        id: "AUR-2481",
+        sessionId: selectedSessionId,
+        status: "confirmed",
+        createdAt: new Date().toISOString(),
+      });
       setProcessing(false);
       setScreen("success");
+      notify("تم تأكيد الحجز");
     }, 800);
   }
+
+  const actions: AuraActions = {
+    selectedStudio,
+    selectedSession,
+    favoriteStudioIds,
+    booking,
+    paymentMethod,
+    selectStudio,
+    selectSession,
+    startBooking,
+    toggleFavorite,
+    openMaps,
+    addToCalendar,
+    cancelBooking,
+    notify,
+    setPaymentMethod,
+  };
 
   return (
     <main className="aura-stage" dir="rtl">
@@ -173,6 +400,7 @@ export default function AuraPrototype() {
           processing={processing}
           screen={screen}
           selectedSession={selectedSession}
+          actions={actions}
           setAccepted={setAccepted}
           setActivity={setActivity}
           setBookingTab={setBookingTab}
@@ -182,21 +410,22 @@ export default function AuraPrototype() {
       <section className="app-shell mobile-shell" aria-label="تطبيق Aura للجوال">
         <div className="app-screen">
           {screen === "login" && <LoginScreen onStart={() => go("home")} />}
-          {screen === "home" && <HomeScreen onGo={go} />}
+          {screen === "home" && <HomeScreen actions={actions} onGo={go} />}
           {screen === "explore" && (
             <ExploreScreen
+              actions={actions}
               activity={activity}
               setActivity={setActivity}
-              onGo={go}
             />
           )}
-          {screen === "studio" && <StudioScreen onGo={go} />}
-          {screen === "schedule" && <ScheduleScreen onGo={go} />}
+          {screen === "studio" && <StudioScreen actions={actions} onGo={go} />}
+          {screen === "schedule" && <ScheduleScreen actions={actions} onGo={go} />}
           {screen === "session" && (
-            <SessionScreen session={selectedSession} onGo={go} />
+            <SessionScreen actions={actions} session={selectedSession} onGo={go} />
           )}
           {screen === "checkout" && (
             <CheckoutScreen
+              actions={actions}
               accepted={accepted}
               setAccepted={setAccepted}
               session={selectedSession}
@@ -204,29 +433,32 @@ export default function AuraPrototype() {
             />
           )}
           {screen === "payment" && (
-            <PaymentScreen processing={processing} payNow={payNow} />
+            <PaymentScreen actions={actions} processing={processing} payNow={payNow} />
           )}
           {screen === "success" && (
-            <SuccessScreen session={selectedSession} onGo={go} />
+            <SuccessScreen actions={actions} session={selectedSession} onGo={go} />
           )}
           {screen === "bookings" && (
             <BookingsScreen
+              actions={actions}
               bookingTab={bookingTab}
               setBookingTab={setBookingTab}
               onGo={go}
             />
           )}
-          {screen === "account" && <AccountScreen />}
+          {screen === "account" && <AccountScreen actions={actions} />}
         </div>
 
         <BottomNav current={screen} onGo={go} />
       </section>
+      {toast && <div className="toast">{toast}</div>}
     </main>
   );
 }
 
 function DesktopExperience({
   accepted,
+  actions,
   activity,
   bookingTab,
   onGo,
@@ -239,6 +471,7 @@ function DesktopExperience({
   setBookingTab,
 }: {
   accepted: boolean;
+  actions: AuraActions;
   activity: string;
   bookingTab: string;
   onGo: (screen: Screen) => void;
@@ -252,29 +485,30 @@ function DesktopExperience({
 }) {
   return (
     <>
-      <DesktopSidebar current={screen} onGo={onGo} />
+      <DesktopSidebar actions={actions} current={screen} onGo={onGo} />
       <section className="desktop-main">
-        <DesktopTopbar onGo={onGo} />
+        <DesktopTopbar actions={actions} onGo={onGo} />
         <div className="desktop-view">
           {screen === "login" && <DesktopLoginScreen onGo={onGo} />}
-          {screen === "home" && <DesktopHomeScreen onGo={onGo} />}
+          {screen === "home" && <DesktopHomeScreen actions={actions} onGo={onGo} />}
           {screen === "explore" && (
             <DesktopExploreScreen
+              actions={actions}
               activity={activity}
               setActivity={setActivity}
-              onGo={onGo}
             />
           )}
-          {screen === "studio" && <DesktopStudioScreen onGo={onGo} />}
-          {screen === "schedule" && <DesktopScheduleScreen onGo={onGo} />}
+          {screen === "studio" && <DesktopStudioScreen actions={actions} />}
+          {screen === "schedule" && <DesktopScheduleScreen actions={actions} onGo={onGo} />}
           {screen === "session" && (
             <DesktopSurface>
-              <SessionScreen session={selectedSession} onGo={onGo} />
+              <SessionScreen actions={actions} session={selectedSession} onGo={onGo} />
             </DesktopSurface>
           )}
           {screen === "checkout" && (
             <DesktopSurface>
               <CheckoutScreen
+                actions={actions}
                 accepted={accepted}
                 setAccepted={setAccepted}
                 session={selectedSession}
@@ -284,22 +518,23 @@ function DesktopExperience({
           )}
           {screen === "payment" && (
             <DesktopSurface narrow>
-              <PaymentScreen processing={processing} payNow={payNow} />
+              <PaymentScreen actions={actions} processing={processing} payNow={payNow} />
             </DesktopSurface>
           )}
           {screen === "success" && (
             <DesktopSurface narrow>
-              <SuccessScreen session={selectedSession} onGo={onGo} />
+              <SuccessScreen actions={actions} session={selectedSession} onGo={onGo} />
             </DesktopSurface>
           )}
           {screen === "bookings" && (
             <DesktopBookingsScreen
+              actions={actions}
               bookingTab={bookingTab}
               setBookingTab={setBookingTab}
               onGo={onGo}
             />
           )}
-          {screen === "account" && <DesktopAccountScreen />}
+          {screen === "account" && <DesktopAccountScreen actions={actions} />}
         </div>
       </section>
     </>
@@ -307,12 +542,15 @@ function DesktopExperience({
 }
 
 function DesktopSidebar({
+  actions,
   current,
   onGo,
 }: {
+  actions: AuraActions;
   current: Screen;
   onGo: (screen: Screen) => void;
 }) {
+  const sidebarSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
   const navItems: Array<{ id: Screen; label: string; icon: ReactNode }> = [
     { id: "home", label: "الرئيسية", icon: <Home size={18} /> },
     { id: "explore", label: "استكشاف", icon: <Search size={18} /> },
@@ -346,8 +584,8 @@ function DesktopSidebar({
 
       <div className="desktop-sidebar-card">
         <span>حجزك القادم</span>
-        <strong>Pilates Reformer</strong>
-        <small>اليوم - 7:00 مساء</small>
+        <strong>{sidebarSession.title}</strong>
+        <small>{sidebarSession.date} - {sidebarSession.time}</small>
         <button onClick={() => onGo("success")} type="button">
           عرض الرمز
         </button>
@@ -356,7 +594,13 @@ function DesktopSidebar({
   );
 }
 
-function DesktopTopbar({ onGo }: { onGo: (screen: Screen) => void }) {
+function DesktopTopbar({
+  actions,
+  onGo,
+}: {
+  actions: AuraActions;
+  onGo: (screen: Screen) => void;
+}) {
   return (
     <header className="desktop-topbar">
       <div>
@@ -368,7 +612,13 @@ function DesktopTopbar({ onGo }: { onGo: (screen: Screen) => void }) {
           <Search size={17} aria-hidden="true" />
           <span>ابحث عن مركز أو جلسة</span>
         </button>
-        <button className="icon-button" type="button" aria-label="الإشعارات" title="الإشعارات">
+        <button
+          className="icon-button"
+          onClick={() => actions.notify("لا توجد إشعارات جديدة")}
+          type="button"
+          aria-label="الإشعارات"
+          title="الإشعارات"
+        >
           <Bell size={18} aria-hidden="true" />
         </button>
         <button className="desktop-user" onClick={() => onGo("account")} type="button">
@@ -380,7 +630,15 @@ function DesktopTopbar({ onGo }: { onGo: (screen: Screen) => void }) {
   );
 }
 
-function DesktopHomeScreen({ onGo }: { onGo: (screen: Screen) => void }) {
+function DesktopHomeScreen({
+  actions,
+  onGo,
+}: {
+  actions: AuraActions;
+  onGo: (screen: Screen) => void;
+}) {
+  const nextSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
+  const nextStudio = getStudioById(nextSession.studioId);
   const quickIntents = [
     { label: "اليوم", hint: "جلسات متاحة", icon: <Clock3 size={18} /> },
     { label: "قريب مني", hint: "حسب الموقع", icon: <MapPin size={18} /> },
@@ -393,10 +651,10 @@ function DesktopHomeScreen({ onGo }: { onGo: (screen: Screen) => void }) {
       <section className="desktop-hero-panel">
         <div>
           <span className="kicker">حجزك القادم</span>
-          <h2>Pilates Reformer</h2>
-          <p>NOVA Movement - اليوم 7:00 مساء</p>
+          <h2>{nextSession.title}</h2>
+          <p>{nextStudio.name} - {nextSession.date} {nextSession.time}</p>
           <div className="desktop-hero-actions">
-            <button className="primary-button" onClick={() => onGo("schedule")} type="button">
+            <button className="primary-button" onClick={() => actions.startBooking()} type="button">
               <CalendarDays size={18} aria-hidden="true" />
               احجز موعد جديد
             </button>
@@ -428,7 +686,11 @@ function DesktopHomeScreen({ onGo }: { onGo: (screen: Screen) => void }) {
         <SectionTitle title="مقترح لك اليوم" action="كل النتائج" onAction={() => onGo("explore")} />
         <div className="desktop-session-grid">
           {sessions.map((session) => (
-            <DesktopSessionTile key={session.title} session={session} onGo={onGo} />
+            <DesktopSessionTile
+              key={session.id}
+              session={session}
+              onSelect={actions.selectSession}
+            />
           ))}
         </div>
       </section>
@@ -437,7 +699,11 @@ function DesktopHomeScreen({ onGo }: { onGo: (screen: Screen) => void }) {
         <SectionTitle title="مراكز قريبة منك" action="استكشف" onAction={() => onGo("explore")} />
         <div className="desktop-studio-grid">
           {studios.map((studio) => (
-            <DesktopStudioTile key={studio.name} studio={studio} onGo={onGo} />
+            <DesktopStudioTile
+              key={studio.id}
+              studio={studio}
+              onSelect={actions.selectStudio}
+            />
           ))}
         </div>
       </section>
@@ -446,14 +712,19 @@ function DesktopHomeScreen({ onGo }: { onGo: (screen: Screen) => void }) {
 }
 
 function DesktopExploreScreen({
+  actions,
   activity,
   setActivity,
-  onGo,
 }: {
+  actions: AuraActions;
   activity: string;
   setActivity: (value: string) => void;
-  onGo: (screen: Screen) => void;
 }) {
+  const filteredStudios =
+    activity === "الكل"
+      ? studios
+      : studios.filter((studio) => studio.tags.includes(activity));
+
   return (
     <div className="desktop-two-column">
       <aside className="desktop-panel desktop-filter-panel">
@@ -467,7 +738,10 @@ function DesktopExploreScreen({
           label="النشاط"
           value={activity}
           options={["الكل", "بيلاتس", "يوغا"]}
-          onChange={setActivity}
+          onChange={(value) => {
+            setActivity(value);
+            actions.notify(`تم اختيار ${value}`);
+          }}
         />
         <div className="desktop-filter-summary">
           <span>الترتيب</span>
@@ -482,17 +756,25 @@ function DesktopExploreScreen({
       <section className="desktop-panel">
         <div className="desktop-panel-heading">
           <div>
-            <span>8 مراكز</span>
+            <span>{filteredStudios.length} مراكز</span>
             <h2>نتائج قريبة منك</h2>
           </div>
-          <button className="secondary-button" type="button">
+          <button
+            className="secondary-button"
+            onClick={() => actions.notify("الفلاتر المتقدمة ستكون في النسخة التالية")}
+            type="button"
+          >
             <SlidersHorizontal size={17} aria-hidden="true" />
             الفلاتر
           </button>
         </div>
         <div className="desktop-studio-grid">
-          {studios.map((studio) => (
-            <DesktopStudioTile key={studio.name} studio={studio} onGo={onGo} />
+          {filteredStudios.map((studio) => (
+            <DesktopStudioTile
+              key={studio.id}
+              studio={studio}
+              onSelect={actions.selectStudio}
+            />
           ))}
         </div>
       </section>
@@ -500,22 +782,34 @@ function DesktopExploreScreen({
   );
 }
 
-function DesktopStudioScreen({ onGo }: { onGo: (screen: Screen) => void }) {
+function DesktopStudioScreen({
+  actions,
+}: {
+  actions: AuraActions;
+}) {
+  const studio = actions.selectedStudio;
+  const studioSessions = sessions.filter((session) => session.studioId === studio.id);
+  const isFavorite = actions.favoriteStudioIds.includes(studio.id);
+
   return (
     <div className="desktop-studio-layout">
       <section className="desktop-panel desktop-studio-detail">
-        <div className="desktop-studio-cover" aria-hidden="true" />
+        <div
+          className="desktop-studio-cover"
+          style={{ backgroundImage: `url(${studio.image})` }}
+          aria-hidden="true"
+        />
         <div className="desktop-studio-heading">
           <div>
             <span className="kicker">مركز بوتيك</span>
-            <h2>NOVA Movement</h2>
+            <h2>{studio.name}</h2>
             <p>
               <MapPin size={15} aria-hidden="true" />
-              العليا - 2.4 كم
+              {studio.area} - {studio.distance}
             </p>
           </div>
           <span className="rating-badge">
-            <Star size={14} fill="currentColor" aria-hidden="true" /> 4.8
+            <Star size={14} fill="currentColor" aria-hidden="true" /> {studio.rating}
           </span>
         </div>
         <p className="studio-copy">
@@ -523,21 +817,43 @@ function DesktopStudioScreen({ onGo }: { onGo: (screen: Screen) => void }) {
           محدودة العدد.
         </p>
         <div className="facility-row" aria-label="المرافق">
-          <span>مواقف</span>
-          <span>غرف تبديل</span>
-          <span>مناشف</span>
+          {studio.facilities.map((facility) => (
+            <span key={facility}>{facility}</span>
+          ))}
+        </div>
+        <div className="inline-actions">
+          <button
+            className="secondary-button"
+            onClick={() => actions.toggleFavorite(studio.id)}
+            type="button"
+          >
+            <Heart size={17} fill={isFavorite ? "currentColor" : "none"} aria-hidden="true" />
+            {isFavorite ? "في المفضلة" : "إضافة للمفضلة"}
+          </button>
+          <button
+            className="secondary-button"
+            onClick={() => actions.openMaps(studio, "directions")}
+            type="button"
+          >
+            <MapPin size={17} aria-hidden="true" />
+            الاتجاهات
+          </button>
         </div>
       </section>
 
       <aside className="desktop-panel desktop-reserve-panel">
         <span className="kicker">حجز فوري</span>
-        <h3>Pilates Reformer</h3>
-        <p>جلسة جماعية - 50 دقيقة</p>
+        <h3>{studioSessions[0]?.title ?? actions.selectedSession.title}</h3>
+        <p>{studioSessions[0]?.category ?? actions.selectedSession.category} - {studioSessions[0]?.duration ?? actions.selectedSession.duration}</p>
         <div className="desktop-price-line">
           <span>يبدأ من</span>
-          <strong>120 ر.س</strong>
+          <strong>{studioSessions[0]?.price ?? actions.selectedSession.price} ر.س</strong>
         </div>
-        <button className="primary-button full" onClick={() => onGo("schedule")} type="button">
+        <button
+          className="primary-button full"
+          onClick={() => actions.startBooking(studioSessions[0]?.id)}
+          type="button"
+        >
           <CalendarDays size={18} aria-hidden="true" />
           احجز موعد
         </button>
@@ -546,10 +862,18 @@ function DesktopStudioScreen({ onGo }: { onGo: (screen: Screen) => void }) {
   );
 }
 
-function DesktopScheduleScreen({ onGo }: { onGo: (screen: Screen) => void }) {
+function DesktopScheduleScreen({
+  actions,
+  onGo,
+}: {
+  actions: AuraActions;
+  onGo: (screen: Screen) => void;
+}) {
   const [selectedDay, setSelectedDay] = useState(0);
   const [selectedTime, setSelectedTime] = useState("04:00 م");
   const days = buildScheduleDays();
+  const session = actions.selectedSession;
+  const studio = getStudioById(session.studioId);
   const times = [
     { value: "04:00 م", status: "available" },
     { value: "04:30 م", status: "available" },
@@ -573,10 +897,10 @@ function DesktopScheduleScreen({ onGo }: { onGo: (screen: Screen) => void }) {
       <section className="desktop-panel">
         <div className="desktop-panel-heading">
           <div>
-            <span>NOVA Movement</span>
+            <span>{studio.name}</span>
             <h2>تفاصيل الحجز</h2>
           </div>
-          <b>120 ر.س</b>
+          <b>{session.price} ر.س</b>
         </div>
         <div className="day-strip desktop-day-strip" aria-label="اختيار اليوم">
           {days.map((day, index) => (
@@ -624,11 +948,11 @@ function DesktopScheduleScreen({ onGo }: { onGo: (screen: Screen) => void }) {
 
       <aside className="desktop-panel desktop-reserve-panel">
         <span className="kicker">ملخص الموعد</span>
-        <h3>Pilates Reformer</h3>
+        <h3>{session.title}</h3>
         <p>{days[selectedDay].weekday} - {selectedTime}</p>
         <div className="desktop-price-line">
           <span>الإجمالي</span>
-          <strong>138 ر.س</strong>
+          <strong>{session.price + Math.round(session.price * 0.15)} ر.س</strong>
         </div>
         <button className="primary-button full" onClick={() => onGo("checkout")} type="button">
           <TicketCheck size={18} aria-hidden="true" />
@@ -640,14 +964,20 @@ function DesktopScheduleScreen({ onGo }: { onGo: (screen: Screen) => void }) {
 }
 
 function DesktopBookingsScreen({
+  actions,
   bookingTab,
   setBookingTab,
   onGo,
 }: {
+  actions: AuraActions;
   bookingTab: string;
   setBookingTab: (value: string) => void;
   onGo: (screen: Screen) => void;
 }) {
+  const bookingSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
+  const bookingStudio = getStudioById(bookingSession.studioId);
+  const hasConfirmedBooking = actions.booking?.status === "confirmed";
+
   return (
     <div className="desktop-panel">
       <div className="desktop-panel-heading">
@@ -668,28 +998,47 @@ function DesktopBookingsScreen({
           ))}
         </div>
       </div>
-      {bookingTab === "القادمة" ? (
+      {bookingTab === "القادمة" && hasConfirmedBooking ? (
         <div className="desktop-booking-card">
           <span className="status-pill">مؤكد</span>
-          <h3>Pilates Reformer</h3>
-          <p>NOVA Movement - اليوم 7:00 مساء</p>
-          <button className="secondary-button" onClick={() => onGo("success")} type="button">
-            <TicketCheck size={16} aria-hidden="true" />
-            رمز الحضور
-          </button>
+          <h3>{bookingSession.title}</h3>
+          <p>{bookingStudio.name} - {bookingSession.date} {bookingSession.time}</p>
+          <div className="inline-actions">
+            <button className="secondary-button" onClick={() => onGo("success")} type="button">
+              <TicketCheck size={16} aria-hidden="true" />
+              رمز الحضور
+            </button>
+            <button
+              className="ghost-button"
+              onClick={actions.cancelBooking}
+              type="button"
+            >
+              إلغاء
+            </button>
+          </div>
+        </div>
+      ) : bookingTab === "القادمة" ? (
+        <div className="empty-state">
+          <CalendarDays size={28} aria-hidden="true" />
+          <strong>لا توجد حجوزات قادمة</strong>
+          <span>احجز جلسة جديدة لتظهر هنا.</span>
         </div>
       ) : (
         <div className="empty-state">
           <CalendarDays size={28} aria-hidden="true" />
-          <strong>لا توجد حجوزات سابقة</strong>
-          <span>ستظهر الجلسات المكتملة هنا.</span>
+          <strong>{actions.booking?.status === "cancelled" ? "آخر حجز تم إلغاؤه" : "لا توجد حجوزات سابقة"}</strong>
+          <span>
+            {actions.booking?.status === "cancelled"
+              ? `${bookingSession.title} - ${bookingStudio.name}`
+              : "ستظهر الجلسات المكتملة هنا."}
+          </span>
         </div>
       )}
     </div>
   );
 }
 
-function DesktopAccountScreen() {
+function DesktopAccountScreen({ actions }: { actions: AuraActions }) {
   return (
     <div className="desktop-two-column">
       <section className="desktop-panel">
@@ -702,7 +1051,12 @@ function DesktopAccountScreen() {
         </div>
         <div className="desktop-account-grid">
           {["الملف الشخصي", "المفضلة", "طرق الدفع", "الإشعارات"].map((item) => (
-            <button className="menu-row" key={item} type="button">
+            <button
+              className="menu-row"
+              key={item}
+              onClick={() => actions.notify(`${item} ستكون صفحة مستقلة لاحقا`)}
+              type="button"
+            >
               <span>{item}</span>
               <ChevronLeft size={17} aria-hidden="true" />
             </button>
@@ -738,13 +1092,17 @@ function DesktopSurface({
 
 function DesktopSessionTile({
   session,
-  onGo,
+  onSelect,
 }: {
   session: Session;
-  onGo: (screen: Screen) => void;
+  onSelect: (sessionId: string) => void;
 }) {
   return (
-    <button className="desktop-session-tile" onClick={() => onGo("session")} type="button">
+    <button
+      className="desktop-session-tile"
+      onClick={() => onSelect(session.id)}
+      type="button"
+    >
       <div
         className="desktop-tile-image"
         style={{ backgroundImage: `url(${session.image})` }}
@@ -762,14 +1120,22 @@ function DesktopSessionTile({
 
 function DesktopStudioTile({
   studio,
-  onGo,
+  onSelect,
 }: {
-  studio: (typeof studios)[number];
-  onGo: (screen: Screen) => void;
+  studio: Studio;
+  onSelect: (studioId: string) => void;
 }) {
   return (
-    <button className="desktop-studio-tile" onClick={() => onGo("studio")} type="button">
-      <div className="desktop-studio-thumb" aria-hidden="true" />
+    <button
+      className="desktop-studio-tile"
+      onClick={() => onSelect(studio.id)}
+      type="button"
+    >
+      <div
+        className="desktop-studio-thumb"
+        style={{ backgroundImage: `url(${studio.image})` }}
+        aria-hidden="true"
+      />
       <div>
         <span>
           <Star size={13} fill="currentColor" aria-hidden="true" /> {studio.rating}
@@ -812,7 +1178,15 @@ function LoginScreen({ onStart }: { onStart: () => void }) {
   );
 }
 
-function HomeScreen({ onGo }: { onGo: (screen: Screen) => void }) {
+function HomeScreen({
+  actions,
+  onGo,
+}: {
+  actions: AuraActions;
+  onGo: (screen: Screen) => void;
+}) {
+  const nextSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
+  const nextStudio = getStudioById(nextSession.studioId);
   const quickIntents = [
     { label: "اليوم", hint: "جلسات قريبة", icon: <Clock3 size={17} /> },
     { label: "قريب مني", hint: "حسب الموقع", icon: <MapPin size={17} /> },
@@ -826,6 +1200,7 @@ function HomeScreen({ onGo }: { onGo: (screen: Screen) => void }) {
         title="مساءك هادئ"
         subtitle="الرياض، حي العليا"
         action={<Bell size={18} aria-hidden="true" />}
+        onAction={() => actions.notify("لا توجد إشعارات جديدة")}
       />
 
       <button
@@ -835,8 +1210,8 @@ function HomeScreen({ onGo }: { onGo: (screen: Screen) => void }) {
       >
         <div>
           <span>حجزك القادم</span>
-          <strong>Pilates Reformer</strong>
-          <p>NOVA Movement - اليوم 7:00 مساء</p>
+          <strong>{nextSession.title}</strong>
+          <p>{nextStudio.name} - {nextSession.date} {nextSession.time}</p>
         </div>
         <CalendarDays size={22} aria-hidden="true" />
       </button>
@@ -868,7 +1243,11 @@ function HomeScreen({ onGo }: { onGo: (screen: Screen) => void }) {
       />
       <div className="session-stack">
         {sessions.slice(0, 2).map((session) => (
-          <SessionCard key={session.title} session={session} onGo={onGo} />
+          <SessionCard
+            key={session.id}
+            session={session}
+            onSelect={actions.selectSession}
+          />
         ))}
       </div>
 
@@ -877,17 +1256,25 @@ function HomeScreen({ onGo }: { onGo: (screen: Screen) => void }) {
         action="استكشف"
         onAction={() => onGo("explore")}
       />
-      <button className="studio-card" onClick={() => onGo("studio")} type="button">
-        <div className="studio-thumb" aria-hidden="true" />
+      <button
+        className="studio-card"
+        onClick={() => actions.selectStudio(studios[0].id)}
+        type="button"
+      >
+        <div
+          className="studio-thumb"
+          style={{ backgroundImage: `url(${studios[0].image})` }}
+          aria-hidden="true"
+        />
         <div>
           <div className="studio-line">
-            <strong>NOVA Movement</strong>
+            <strong>{studios[0].name}</strong>
             <span>
-              <Star size={13} fill="currentColor" aria-hidden="true" /> 4.8
+              <Star size={13} fill="currentColor" aria-hidden="true" /> {studios[0].rating}
             </span>
           </div>
-          <p>بيلاتس، يوغا، جلسات خاصة</p>
-          <small>العليا - يبدأ من 80 ر.س</small>
+          <p>{studios[0].tags}</p>
+          <small>{studios[0].area} - {studios[0].price}</small>
         </div>
       </button>
     </div>
@@ -895,20 +1282,26 @@ function HomeScreen({ onGo }: { onGo: (screen: Screen) => void }) {
 }
 
 function ExploreScreen({
+  actions,
   activity,
   setActivity,
-  onGo,
 }: {
+  actions: AuraActions;
   activity: string;
   setActivity: (value: string) => void;
-  onGo: (screen: Screen) => void;
 }) {
+  const filteredStudios =
+    activity === "الكل"
+      ? studios
+      : studios.filter((studio) => studio.tags.includes(activity));
+
   return (
     <div className="screen-content">
       <AppHeader
         title="استكشاف"
         subtitle="ابحث حسب النشاط، الوقت، أو السعر"
         action={<SlidersHorizontal size={18} aria-hidden="true" />}
+        onAction={() => actions.notify("الفلاتر المتقدمة ستكون في النسخة التالية")}
       />
 
       <div className="input-card">
@@ -920,30 +1313,50 @@ function ExploreScreen({
         label="النشاط"
         value={activity}
         options={["الكل", "بيلاتس", "يوغا"]}
-        onChange={setActivity}
+        onChange={(value) => {
+          setActivity(value);
+          actions.notify(`تم اختيار ${value}`);
+        }}
       />
 
       <div className="result-header">
-        <strong>8 مراكز</strong>
+        <strong>{filteredStudios.length} مراكز</strong>
         <span>الأقرب أولاً</span>
       </div>
 
       <div className="studio-result-list">
-        {studios.map((studio) => (
-          <StudioResultCard key={studio.name} studio={studio} onGo={onGo} />
+        {filteredStudios.map((studio) => (
+          <StudioResultCard
+            key={studio.id}
+            studio={studio}
+            onSelect={actions.selectStudio}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function StudioScreen({ onGo }: { onGo: (screen: Screen) => void }) {
+function StudioScreen({
+  actions,
+  onGo,
+}: {
+  actions: AuraActions;
+  onGo: (screen: Screen) => void;
+}) {
+  const studio = actions.selectedStudio;
+  const studioSessions = sessions.filter((session) => session.studioId === studio.id);
+  const isFavorite = actions.favoriteStudioIds.includes(studio.id);
+
   return (
     <div className="screen-content studio-screen">
-      <div className="studio-cover">
+      <div
+        className="studio-cover"
+        style={{ backgroundImage: `url(${studio.image})` }}
+      >
         <button
           className="icon-button back"
-          onClick={() => onGo("home")}
+          onClick={() => onGo("explore")}
           type="button"
           aria-label="رجوع"
           title="رجوع"
@@ -952,24 +1365,25 @@ function StudioScreen({ onGo }: { onGo: (screen: Screen) => void }) {
         </button>
         <button
           className="icon-button"
+          onClick={() => actions.toggleFavorite(studio.id)}
           type="button"
           aria-label="إضافة للمفضلة"
           title="إضافة للمفضلة"
         >
-          <Heart size={18} aria-hidden="true" />
+          <Heart size={18} fill={isFavorite ? "currentColor" : "none"} aria-hidden="true" />
         </button>
       </div>
 
       <div className="studio-info">
         <div>
-          <h2>NOVA Movement</h2>
+          <h2>{studio.name}</h2>
           <p>
             <MapPin size={15} aria-hidden="true" />
-            العليا - 2.4 كم
+            {studio.area} - {studio.distance}
           </p>
         </div>
         <span className="rating-badge">
-          <Star size={14} fill="currentColor" aria-hidden="true" /> 4.8
+          <Star size={14} fill="currentColor" aria-hidden="true" /> {studio.rating}
         </span>
       </div>
 
@@ -979,17 +1393,36 @@ function StudioScreen({ onGo }: { onGo: (screen: Screen) => void }) {
       </p>
 
       <div className="facility-row" aria-label="المرافق">
-        <span>مواقف</span>
-        <span>غرف تبديل</span>
-        <span>مناشف</span>
+        {studio.facilities.map((facility) => (
+          <span key={facility}>{facility}</span>
+        ))}
       </div>
 
       <SectionTitle title="معلومات الحجز" action="حجز فوري" />
       <div className="studio-profile-grid">
-        <MiniStat icon={<Clock3 size={16} />} label="7:00 ص - 10:00 م" />
-        <MiniStat icon={<Dumbbell size={16} />} label="بيلاتس ويوغا" />
+        <MiniStat icon={<Clock3 size={16} />} label={studio.hours} />
+        <MiniStat icon={<Dumbbell size={16} />} label={studio.tags} />
         <MiniStat icon={<UserRound size={16} />} label="6 مدربين" />
         <MiniStat icon={<TicketCheck size={16} />} label="حجز فوري" />
+      </div>
+
+      <div className="inline-actions">
+        <button
+          className="secondary-button"
+          onClick={() => actions.openMaps(studio, "directions")}
+          type="button"
+        >
+          <MapPin size={17} aria-hidden="true" />
+          الاتجاهات
+        </button>
+        <button
+          className="secondary-button"
+          onClick={() => actions.notify(`رقم المركز: ${studio.phone}`)}
+          type="button"
+        >
+          <MessageCircle size={17} aria-hidden="true" />
+          تواصل
+        </button>
       </div>
 
       <section className="plain-section">
@@ -1001,7 +1434,11 @@ function StudioScreen({ onGo }: { onGo: (screen: Screen) => void }) {
         </p>
       </section>
 
-      <button className="primary-button sticky" onClick={() => onGo("schedule")}>
+      <button
+        className="primary-button sticky"
+        onClick={() => actions.startBooking(studioSessions[0]?.id)}
+        type="button"
+      >
         <CalendarDays size={18} aria-hidden="true" />
         احجز موعد
       </button>
@@ -1009,10 +1446,18 @@ function StudioScreen({ onGo }: { onGo: (screen: Screen) => void }) {
   );
 }
 
-function ScheduleScreen({ onGo }: { onGo: (screen: Screen) => void }) {
+function ScheduleScreen({
+  actions,
+  onGo,
+}: {
+  actions: AuraActions;
+  onGo: (screen: Screen) => void;
+}) {
   const [selectedDay, setSelectedDay] = useState(0);
   const [selectedTime, setSelectedTime] = useState("04:00 م");
   const days = buildScheduleDays();
+  const session = actions.selectedSession;
+  const studio = getStudioById(session.studioId);
   const times = [
     { value: "04:00 م", status: "available" },
     { value: "04:30 م", status: "available" },
@@ -1035,16 +1480,17 @@ function ScheduleScreen({ onGo }: { onGo: (screen: Screen) => void }) {
     <div className="screen-content schedule-screen">
       <AppHeader
         title="تفاصيل الحجز"
-        subtitle="NOVA Movement"
+        subtitle={studio.name}
         action={<CalendarDays size={18} aria-hidden="true" />}
+        onAction={() => actions.addToCalendar()}
       />
 
       <div className="schedule-studio-summary">
         <div>
-          <span>Pilates Reformer</span>
-          <strong>جلسة جماعية - 50 دقيقة</strong>
+          <span>{session.title}</span>
+          <strong>{session.category} - {session.duration}</strong>
         </div>
-        <b>120 ر.س</b>
+        <b>{session.price} ر.س</b>
       </div>
 
       <h3 className="schedule-prompt">متى وقت حجزك؟</h3>
@@ -1101,12 +1547,16 @@ function ScheduleScreen({ onGo }: { onGo: (screen: Screen) => void }) {
 }
 
 function SessionScreen({
+  actions,
   session,
   onGo,
 }: {
+  actions: AuraActions;
   session: Session;
   onGo: (screen: Screen) => void;
 }) {
+  const studio = getStudioById(session.studioId);
+
   return (
     <div className="screen-content session-detail">
       <div
@@ -1127,9 +1577,9 @@ function SessionScreen({
 
       <div className="detail-heading">
         <div>
-          <span className="kicker">جلسة جماعية</span>
+          <span className="kicker">{session.category}</span>
           <h2>{session.title}</h2>
-          <p>{session.studio}</p>
+          <p>{studio.name}</p>
         </div>
         <strong>{session.price} ر.س</strong>
       </div>
@@ -1138,15 +1588,12 @@ function SessionScreen({
         <MiniStat icon={<CalendarDays size={16} />} label={session.date} />
         <MiniStat icon={<Clock3 size={16} />} label={session.time} />
         <MiniStat icon={<Dumbbell size={16} />} label={session.level} />
-        <MiniStat icon={<UserRound size={16} />} label={session.trainer} />
+        <MiniStat icon={<UserRound size={16} />} label={`${session.trainer} - ${session.duration}`} />
       </div>
 
       <section className="plain-section">
         <h3>عن الجلسة</h3>
-        <p>
-          تدريب مركز على القوة، التوازن، والتنفس. مناسب لمن لديه خبرة بسيطة
-          ويريد جلسة دقيقة بدون ازدحام.
-        </p>
+        <p>{session.description}</p>
       </section>
 
       <section className="policy-box">
@@ -1157,7 +1604,11 @@ function SessionScreen({
         </div>
       </section>
 
-      <button className="primary-button sticky" onClick={() => onGo("checkout")}>
+      <button
+        className="primary-button sticky"
+        onClick={() => actions.startBooking(session.id)}
+        type="button"
+      >
         <TicketCheck size={18} aria-hidden="true" />
         احجز الآن
       </button>
@@ -1166,11 +1617,13 @@ function SessionScreen({
 }
 
 function CheckoutScreen({
+  actions,
   session,
   accepted,
   setAccepted,
   onGo,
 }: {
+  actions: AuraActions;
   session: Session;
   accepted: boolean;
   setAccepted: (value: boolean) => void;
@@ -1178,6 +1631,7 @@ function CheckoutScreen({
 }) {
   const vat = Math.round(session.price * 0.15);
   const total = session.price + vat;
+  const studio = getStudioById(session.studioId);
 
   return (
     <div className="screen-content">
@@ -1185,10 +1639,11 @@ function CheckoutScreen({
         title="ملخص الحجز"
         subtitle="راجع التفاصيل قبل الدفع"
         action={<TicketCheck size={18} aria-hidden="true" />}
+        onAction={() => actions.openMaps(studio, "directions")}
       />
 
       <div className="booking-summary">
-        <span className="kicker">NOVA Movement</span>
+        <span className="kicker">{studio.name}</span>
         <h2>{session.title}</h2>
         <div className="summary-row">
           <CalendarDays size={16} aria-hidden="true" />
@@ -1202,7 +1657,7 @@ function CheckoutScreen({
         </div>
         <div className="summary-row">
           <MapPin size={16} aria-hidden="true" />
-          <span>{session.area}، الرياض</span>
+          <span>{studio.address}</span>
         </div>
       </div>
 
@@ -1235,12 +1690,16 @@ function CheckoutScreen({
 }
 
 function PaymentScreen({
+  actions,
   processing,
   payNow,
 }: {
+  actions: AuraActions;
   processing: boolean;
   payNow: () => void;
 }) {
+  const total = actions.selectedSession.price + Math.round(actions.selectedSession.price * 0.15);
+
   return (
     <div className="screen-content payment-screen">
       <AppHeader
@@ -1249,26 +1708,42 @@ function PaymentScreen({
         action={<WalletCards size={18} aria-hidden="true" />}
       />
 
-      <button className="pay-option selected" type="button">
+      <button
+        className={actions.paymentMethod === "Apple Pay" ? "pay-option selected" : "pay-option"}
+        onClick={() => actions.setPaymentMethod("Apple Pay")}
+        type="button"
+      >
         <span>
           <WalletCards size={18} aria-hidden="true" />
           Apple Pay
         </span>
-        <Check size={18} aria-hidden="true" />
+        {actions.paymentMethod === "Apple Pay" ? (
+          <Check size={18} aria-hidden="true" />
+        ) : (
+          <ChevronLeft size={18} aria-hidden="true" />
+        )}
       </button>
 
-      <button className="pay-option" type="button">
+      <button
+        className={actions.paymentMethod === "card" ? "pay-option selected" : "pay-option"}
+        onClick={() => actions.setPaymentMethod("card")}
+        type="button"
+      >
         <span>
           <CreditCard size={18} aria-hidden="true" />
           مدى أو بطاقة بنكية
         </span>
-        <ChevronLeft size={18} aria-hidden="true" />
+        {actions.paymentMethod === "card" ? (
+          <Check size={18} aria-hidden="true" />
+        ) : (
+          <ChevronLeft size={18} aria-hidden="true" />
+        )}
       </button>
 
       <div className="card-preview">
         <span>Aura Pay</span>
         <strong>•••• 4821</strong>
-        <small>إجمالي العملية 138 ر.س</small>
+        <small>إجمالي العملية {total} ر.س</small>
       </div>
 
       <button
@@ -1285,26 +1760,31 @@ function PaymentScreen({
 }
 
 function SuccessScreen({
+  actions,
   session,
   onGo,
 }: {
+  actions: AuraActions;
   session: Session;
   onGo: (screen: Screen) => void;
 }) {
+  const studio = getStudioById(session.studioId);
+  const bookingId = actions.booking?.id ?? "AUR-2481";
+
   return (
     <div className="screen-content success-screen">
       <div className="success-mark">
         <Check size={34} aria-hidden="true" />
       </div>
       <h2>تم تأكيد الحجز</h2>
-      <p>رقم الحجز AUR-2481</p>
+      <p>رقم الحجز {bookingId}</p>
 
       <div className="confirmed-card">
         <strong>{session.title}</strong>
         <span>
           {session.date} - {session.time}
         </span>
-        <span>{session.studio}، العليا</span>
+        <span>{studio.name}، {studio.area}</span>
       </div>
 
       <div className="qr-box" aria-label="رمز الحضور">
@@ -1314,11 +1794,15 @@ function SuccessScreen({
       </div>
 
       <div className="two-actions">
-        <button className="secondary-button" type="button">
+        <button className="secondary-button" onClick={actions.addToCalendar} type="button">
           <CalendarDays size={17} aria-hidden="true" />
           التقويم
         </button>
-        <button className="secondary-button" type="button">
+        <button
+          className="secondary-button"
+          onClick={() => actions.openMaps(studio, "directions")}
+          type="button"
+        >
           <MapPin size={17} aria-hidden="true" />
           الاتجاهات
         </button>
@@ -1333,20 +1817,27 @@ function SuccessScreen({
 }
 
 function BookingsScreen({
+  actions,
   bookingTab,
   setBookingTab,
   onGo,
 }: {
+  actions: AuraActions;
   bookingTab: string;
   setBookingTab: (value: string) => void;
   onGo: (screen: Screen) => void;
 }) {
+  const bookingSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
+  const bookingStudio = getStudioById(bookingSession.studioId);
+  const hasConfirmedBooking = actions.booking?.status === "confirmed";
+
   return (
     <div className="screen-content">
       <AppHeader
         title="حجوزاتي"
         subtitle="تابع المواعيد والحضور"
         action={<CalendarDays size={18} aria-hidden="true" />}
+        onAction={() => actions.addToCalendar()}
       />
 
       <div className="segmented">
@@ -1362,33 +1853,43 @@ function BookingsScreen({
         ))}
       </div>
 
-      {bookingTab === "القادمة" ? (
+      {bookingTab === "القادمة" && hasConfirmedBooking ? (
         <div className="booking-card">
           <span className="status-pill">مؤكد</span>
-          <h2>Pilates Reformer</h2>
-          <p>NOVA Movement - اليوم 7:00 مساء</p>
+          <h2>{bookingSession.title}</h2>
+          <p>{bookingStudio.name} - {bookingSession.date} {bookingSession.time}</p>
           <div className="booking-actions">
-            <button className="secondary-button" onClick={() => onGo("success")}>
+            <button className="secondary-button" onClick={() => onGo("success")} type="button">
               <TicketCheck size={16} aria-hidden="true" />
               رمز الحضور
             </button>
-            <button className="ghost-button" type="button">
+            <button className="ghost-button" onClick={actions.cancelBooking} type="button">
               إلغاء
             </button>
           </div>
         </div>
+      ) : bookingTab === "القادمة" ? (
+        <div className="empty-state">
+          <CalendarDays size={28} aria-hidden="true" />
+          <strong>لا توجد حجوزات قادمة</strong>
+          <span>احجز جلسة جديدة لتظهر هنا.</span>
+        </div>
       ) : (
         <div className="empty-state">
           <CalendarDays size={28} aria-hidden="true" />
-          <strong>لا توجد حجوزات سابقة</strong>
-          <span>ستظهر الجلسات المكتملة هنا.</span>
+          <strong>{actions.booking?.status === "cancelled" ? "آخر حجز تم إلغاؤه" : "لا توجد حجوزات سابقة"}</strong>
+          <span>
+            {actions.booking?.status === "cancelled"
+              ? `${bookingSession.title} - ${bookingStudio.name}`
+              : "ستظهر الجلسات المكتملة هنا."}
+          </span>
         </div>
       )}
     </div>
   );
 }
 
-function AccountScreen() {
+function AccountScreen({ actions }: { actions: AuraActions }) {
   const rows = [
     { icon: <UserRound size={18} />, label: "الملف الشخصي" },
     { icon: <Heart size={18} />, label: "المفضلة" },
@@ -1404,6 +1905,7 @@ function AccountScreen() {
         title="حسابي"
         subtitle="حصة الدويغري"
         action={<CircleUserRound size={18} aria-hidden="true" />}
+        onAction={() => actions.notify("بيانات الحساب محفوظة في البروتوتايب")}
       />
 
       <div className="profile-card">
@@ -1416,7 +1918,12 @@ function AccountScreen() {
 
       <div className="menu-list">
         {rows.map((row) => (
-          <button className="menu-row" key={row.label} type="button">
+          <button
+            className="menu-row"
+            key={row.label}
+            onClick={() => actions.notify(`${row.label} ستكون صفحة مستقلة لاحقا`)}
+            type="button"
+          >
             <span>
               {row.icon}
               {row.label}
@@ -1433,10 +1940,12 @@ function AppHeader({
   title,
   subtitle,
   action,
+  onAction,
 }: {
   title: string;
   subtitle: string;
   action: ReactNode;
+  onAction?: () => void;
 }) {
   return (
     <header className="app-header">
@@ -1444,7 +1953,13 @@ function AppHeader({
         <p>{subtitle}</p>
         <h2>{title}</h2>
       </div>
-      <button className="icon-button" type="button" aria-label={title} title={title}>
+      <button
+        className="icon-button"
+        onClick={onAction}
+        type="button"
+        aria-label={title}
+        title={title}
+      >
         {action}
       </button>
     </header>
@@ -1505,24 +2020,15 @@ function SectionTitle({
   );
 }
 
-function InfoTile({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="info-tile">
-      <strong>{value}</strong>
-      <span>{label}</span>
-    </div>
-  );
-}
-
 function SessionCard({
   session,
-  onGo,
+  onSelect,
 }: {
   session: Session;
-  onGo: (screen: Screen) => void;
+  onSelect: (sessionId: string) => void;
 }) {
   return (
-    <button className="session-card" onClick={() => onGo("session")} type="button">
+    <button className="session-card" onClick={() => onSelect(session.id)} type="button">
       <div
         className="session-image"
         style={{ backgroundImage: `url(${session.image})` }}
@@ -1549,14 +2055,22 @@ function SessionCard({
 
 function StudioResultCard({
   studio,
-  onGo,
+  onSelect,
 }: {
-  studio: (typeof studios)[number];
-  onGo: (screen: Screen) => void;
+  studio: Studio;
+  onSelect: (studioId: string) => void;
 }) {
   return (
-    <button className="studio-result-card" onClick={() => onGo("studio")} type="button">
-      <div className="studio-result-image" aria-hidden="true" />
+    <button
+      className="studio-result-card"
+      onClick={() => onSelect(studio.id)}
+      type="button"
+    >
+      <div
+        className="studio-result-image"
+        style={{ backgroundImage: `url(${studio.image})` }}
+        aria-hidden="true"
+      />
       <div className="studio-result-copy">
         <div className="studio-line">
           <strong>{studio.name}</strong>

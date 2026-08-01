@@ -23,7 +23,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Screen =
   | "login"
@@ -40,8 +40,10 @@ type Screen =
 
 type Studio = {
   id: string;
+  placeId?: string;
   name: string;
   rating: string;
+  reviewCount?: number;
   area: string;
   distance: string;
   tags: string;
@@ -52,6 +54,11 @@ type Studio = {
   facilities: string[];
   image: string;
   mapQuery: string;
+  website?: string;
+  googleMapsUri?: string;
+  lat?: number;
+  lng?: number;
+  source?: "sample" | "google";
 };
 
 type Session = {
@@ -82,21 +89,95 @@ type BookingRecord = {
 };
 
 type AuraActions = {
+  availableStudios: Studio[];
+  availableSessions: Session[];
   selectedStudio: Studio;
   selectedSession: Session;
   favoriteStudioIds: string[];
   booking: BookingRecord | null;
   paymentMethod: string;
+  placesStatus: "idle" | "needs-key" | "loading" | "ready" | "error";
+  placesError: string | null;
+  placesQuery: string;
+  googleMapsKey: string;
+  placesLastUpdated: string | null;
   selectStudio: (studioId: string) => void;
   selectSession: (sessionId: string) => void;
   startBooking: (sessionId?: string) => void;
   toggleFavorite: (studioId: string) => void;
   openMaps: (studio: Studio, mode?: "search" | "directions") => void;
+  refreshPlaces: () => void;
+  setPlacesQuery: (value: string) => void;
+  saveGoogleMapsKey: (value: string) => void;
   addToCalendar: () => void;
   cancelBooking: () => void;
   notify: (message: string) => void;
   setPaymentMethod: (value: string) => void;
 };
+
+type GoogleMapsWindow = Window & {
+  google?: GoogleNamespace;
+  __auraGoogleMapsLoader?: Promise<void>;
+};
+
+type GoogleNamespace = {
+  maps: {
+    importLibrary: (libraryName: string) => Promise<Record<string, unknown>>;
+  };
+};
+
+type GooglePlacePhoto = {
+  getURI?: (options: { maxWidth: number }) => string;
+  getUrl?: (options: { maxWidth: number }) => string;
+};
+
+type GooglePlace = {
+  id?: string;
+  displayName?: string | { text?: string };
+  formattedAddress?: string;
+  location?: {
+    lat?: number | (() => number);
+    lng?: number | (() => number);
+  };
+  rating?: number;
+  userRatingCount?: number;
+  googleMapsURI?: string;
+  websiteURI?: string;
+  internationalPhoneNumber?: string;
+  regularOpeningHours?: {
+    weekdayDescriptions?: string[];
+  };
+  photos?: GooglePlacePhoto[];
+};
+
+type GooglePlaceConstructor = {
+  searchByText: (request: Record<string, unknown>) => Promise<{ places?: GooglePlace[] }>;
+};
+
+const RIYADH_CENTER = { lat: 24.7136, lng: 46.6753 };
+const RIYADH_SEARCH_TERMS = [
+  "Pilates studio Riyadh",
+  "Yoga studio Riyadh",
+  "Reformer Pilates Riyadh",
+  "Hot Yoga Riyadh",
+  "مركز بيلاتس الرياض",
+  "مركز يوغا الرياض",
+];
+
+const sampleStudioImage =
+  "https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?auto=format&fit=crop&w=1000&q=80";
+
+const configuredGoogleMapsKey =
+  typeof process !== "undefined"
+    ? process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""
+    : "";
+
+function getInitialGoogleMapsKey() {
+  if (typeof window === "undefined") {
+    return configuredGoogleMapsKey;
+  }
+  return window.localStorage.getItem("auraGoogleMapsKey") ?? configuredGoogleMapsKey;
+}
 
 const studios: Studio[] = [
   {
@@ -247,12 +328,243 @@ const sessions: Session[] = [
   },
 ];
 
-function getStudioById(studioId: string) {
-  return studios.find((studio) => studio.id === studioId) ?? studios[0];
+function getStudioByIdFrom(studioId: string, studioList: Studio[]) {
+  return studioList.find((studio) => studio.id === studioId) ?? studioList[0] ?? studios[0];
 }
 
-function getSessionById(sessionId: string) {
-  return sessions.find((session) => session.id === sessionId) ?? sessions[0];
+function getSessionByIdFrom(sessionId: string, sessionList: Session[]) {
+  return sessionList.find((session) => session.id === sessionId) ?? sessionList[0] ?? sessions[0];
+}
+
+function buildDefaultSession(studio: Studio): Session {
+  const studioType = studio.tags.includes("يوغا") || studio.name.toLowerCase().includes("yoga")
+    ? "يوغا"
+    : "بيلاتس";
+
+  return {
+    id: `${studio.id}-drop-in`,
+    studioId: studio.id,
+    title: studioType === "يوغا" ? "Yoga Drop-in" : "Pilates Drop-in",
+    studio: studio.name,
+    area: studio.area,
+    time: "7:00 مساء",
+    date: "اليوم",
+    price: 120,
+    seats: 6,
+    level: "مناسب للجميع",
+    trainer: "فريق المركز",
+    image: studio.image,
+    duration: "50 دقيقة",
+    category: studioType,
+    description:
+      "موعد تجريبي قابل للحجز داخل البروتوتايب. بيانات الجلسات والأسعار النهائية يضيفها المركز بعد اعتماده في Aura.",
+  };
+}
+
+function buildAvailableSessions(studioList: Studio[]) {
+  const staticSessions = sessions.filter((session) =>
+    studioList.some((studio) => studio.id === session.studioId),
+  );
+  const sessionStudioIds = new Set(staticSessions.map((session) => session.studioId));
+  const generatedSessions = studioList
+    .filter((studio) => !sessionStudioIds.has(studio.id))
+    .map(buildDefaultSession);
+
+  return [...staticSessions, ...generatedSessions];
+}
+
+function loadGoogleMaps(apiKey: string): Promise<GoogleNamespace> {
+  const browserWindow = window as GoogleMapsWindow;
+
+  if (browserWindow.google?.maps?.importLibrary) {
+    return Promise.resolve(browserWindow.google);
+  }
+
+  if (browserWindow.__auraGoogleMapsLoader) {
+    return browserWindow.__auraGoogleMapsLoader.then(() => {
+      if (!browserWindow.google) {
+        throw new Error("تعذر تحميل Google Maps");
+      }
+      return browserWindow.google;
+    });
+  }
+
+  browserWindow.__auraGoogleMapsLoader = new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script");
+    const params = new URLSearchParams({
+      key: apiKey,
+      v: "weekly",
+      libraries: "places,marker",
+      language: "ar",
+      region: "SA",
+    });
+
+    script.src = `https://maps.googleapis.com/maps/api/js?${params.toString()}`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("تعذر تحميل Google Maps"));
+    document.head.appendChild(script);
+  });
+
+  return browserWindow.__auraGoogleMapsLoader.then(() => {
+    if (!browserWindow.google) {
+      throw new Error("تعذر تحميل Google Maps");
+    }
+    return browserWindow.google;
+  });
+}
+
+function normalizePlaceName(value: unknown) {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value && typeof value === "object" && "text" in value) {
+    return String((value as { text?: string }).text ?? "");
+  }
+  return "مركز حركة";
+}
+
+function getPlacePhoto(place: GooglePlace) {
+  const photo = place.photos?.[0];
+  if (!photo) {
+    return sampleStudioImage;
+  }
+  if (typeof photo.getURI === "function") {
+    return photo.getURI({ maxWidth: 1200 });
+  }
+  if (typeof photo.getUrl === "function") {
+    return photo.getUrl({ maxWidth: 1200 });
+  }
+  return sampleStudioImage;
+}
+
+function getPlaceLatLng(location: GooglePlace["location"]) {
+  if (!location) {
+    return {};
+  }
+
+  const lat = typeof location.lat === "function" ? location.lat() : location.lat;
+  const lng = typeof location.lng === "function" ? location.lng() : location.lng;
+  return {
+    lat: typeof lat === "number" ? lat : undefined,
+    lng: typeof lng === "number" ? lng : undefined,
+  };
+}
+
+function estimateRiyadhArea(address: string) {
+  const knownAreas = [
+    "العليا",
+    "الملقا",
+    "النخيل",
+    "حطين",
+    "الياسمين",
+    "النرجس",
+    "الربيع",
+    "الصحافة",
+    "الروضة",
+    "العارض",
+  ];
+
+  return knownAreas.find((area) => address.includes(area)) ?? "الرياض";
+}
+
+function classifyStudio(placeName: string, address: string) {
+  const value = `${placeName} ${address}`.toLowerCase();
+  const tags = [];
+
+  if (value.includes("pilates") || value.includes("بيلاتس")) {
+    tags.push("بيلاتس");
+  }
+  if (value.includes("yoga") || value.includes("يوغا")) {
+    tags.push("يوغا");
+  }
+  if (value.includes("reformer")) {
+    tags.push("Reformer");
+  }
+
+  return tags.length ? tags.join("، ") : "بيلاتس، يوغا";
+}
+
+function mapGooglePlaceToStudio(place: GooglePlace): Studio {
+  const name = normalizePlaceName(place.displayName);
+  const address = place.formattedAddress ?? "الرياض";
+  const { lat, lng } = getPlaceLatLng(place.location);
+  const tags = classifyStudio(name, address);
+  const hours = place.regularOpeningHours?.weekdayDescriptions?.[0] ?? "أوقات العمل عبر Google";
+
+  return {
+    id: `google-${place.id}`,
+    placeId: place.id,
+    name,
+    rating: place.rating ? String(place.rating) : "جديد",
+    reviewCount: place.userRatingCount,
+    area: estimateRiyadhArea(address),
+    distance: "ضمن الرياض",
+    tags,
+    price: "حسب المركز",
+    address,
+    hours,
+    phone: place.internationalPhoneNumber ?? "غير متوفر",
+    facilities: ["بيانات Google", "اتجاهات", "اعتماد لاحق"],
+    image: getPlacePhoto(place),
+    mapQuery: address ? `${name} ${address}` : name,
+    website: place.websiteURI,
+    googleMapsUri: place.googleMapsURI,
+    lat,
+    lng,
+    source: "google",
+  };
+}
+
+async function fetchRiyadhStudiosFromGoogle(apiKey: string, query: string) {
+  const google = await loadGoogleMaps(apiKey);
+  const { Place } = (await google.maps.importLibrary("places")) as {
+    Place: GooglePlaceConstructor;
+  };
+  const terms = query.trim() ? [query.trim()] : RIYADH_SEARCH_TERMS;
+  const results = new Map<string, Studio>();
+
+  for (const textQuery of terms) {
+    const { places } = await Place.searchByText({
+      textQuery,
+      fields: [
+        "id",
+        "displayName",
+        "formattedAddress",
+        "location",
+        "rating",
+        "userRatingCount",
+        "googleMapsURI",
+        "websiteURI",
+        "internationalPhoneNumber",
+        "regularOpeningHours",
+        "photos",
+        "businessStatus",
+      ],
+      locationBias: {
+        center: RIYADH_CENTER,
+        radius: 45000,
+      },
+      language: "ar",
+      maxResultCount: 20,
+      minRating: 1,
+      region: "sa",
+    });
+
+    for (const place of places ?? []) {
+      if (!place.id || results.has(place.id)) {
+        continue;
+      }
+      results.set(place.id, mapGooglePlaceToStudio(place));
+    }
+  }
+
+  return Array.from(results.values()).sort((first, second) => {
+    const secondRating = Number(second.rating) || 0;
+    const firstRating = Number(first.rating) || 0;
+    return secondRating - firstRating;
+  });
 }
 
 function buildMapsUrl(studio: Studio, mode: "search" | "directions" = "search") {
@@ -279,6 +591,14 @@ export default function AuraPrototype() {
   const [accepted, setAccepted] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [bookingTab, setBookingTab] = useState("القادمة");
+  const [googleStudios, setGoogleStudios] = useState<Studio[]>([]);
+  const [googleMapsKey, setGoogleMapsKey] = useState(getInitialGoogleMapsKey);
+  const [placesStatus, setPlacesStatus] = useState<AuraActions["placesStatus"]>(
+    () => (getInitialGoogleMapsKey() ? "idle" : "needs-key"),
+  );
+  const [placesError, setPlacesError] = useState<string | null>(null);
+  const [placesQuery, setPlacesQuery] = useState("");
+  const [placesLastUpdated, setPlacesLastUpdated] = useState<string | null>(null);
   const [selectedStudioId, setSelectedStudioId] = useState("nova");
   const [selectedSessionId, setSelectedSessionId] = useState("nova-reformer");
   const [favoriteStudioIds, setFavoriteStudioIds] = useState<string[]>(["nova"]);
@@ -290,8 +610,51 @@ export default function AuraPrototype() {
     createdAt: "2026-08-01T19:00:00+03:00",
   });
   const [toast, setToast] = useState<string | null>(null);
-  const selectedStudio = getStudioById(selectedStudioId);
-  const selectedSession = getSessionById(selectedSessionId);
+  const availableStudios = googleStudios.length ? googleStudios : studios;
+  const availableSessions = buildAvailableSessions(availableStudios);
+  const selectedStudio = getStudioByIdFrom(selectedStudioId, availableStudios);
+  const selectedSession = getSessionByIdFrom(selectedSessionId, availableSessions);
+
+  useEffect(() => {
+    if (!googleMapsKey) {
+      return;
+    }
+    let isCancelled = false;
+
+    void (async () => {
+      setPlacesStatus("loading");
+      setPlacesError(null);
+      try {
+        const nextStudios = await fetchRiyadhStudiosFromGoogle(googleMapsKey, "");
+        if (isCancelled || !nextStudios.length) {
+          return;
+        }
+
+        const nextSessions = buildAvailableSessions(nextStudios);
+        setGoogleStudios(nextStudios);
+        setSelectedStudioId(nextStudios[0].id);
+        setSelectedSessionId(nextSessions[0].id);
+        setPlacesLastUpdated(new Intl.DateTimeFormat("ar-SA", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date()));
+        setPlacesStatus("ready");
+      } catch (error) {
+        if (!isCancelled) {
+          setPlacesStatus("error");
+          setPlacesError(
+            error instanceof Error
+              ? error.message
+              : "تعذر الاتصال بـ Google Places",
+          );
+        }
+      }
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [googleMapsKey]);
 
   function go(nextScreen: Screen) {
     setProcessing(false);
@@ -304,21 +667,23 @@ export default function AuraPrototype() {
   }
 
   function selectStudio(studioId: string) {
-    const nextSession = sessions.find((session) => session.studioId === studioId) ?? sessions[0];
+    const nextSession =
+      availableSessions.find((session) => session.studioId === studioId) ??
+      buildDefaultSession(getStudioByIdFrom(studioId, availableStudios));
     setSelectedStudioId(studioId);
     setSelectedSessionId(nextSession.id);
     setScreen("studio");
   }
 
   function selectSession(sessionId: string) {
-    const nextSession = getSessionById(sessionId);
+    const nextSession = getSessionByIdFrom(sessionId, availableSessions);
     setSelectedStudioId(nextSession.studioId);
     setSelectedSessionId(nextSession.id);
     setScreen("session");
   }
 
   function startBooking(sessionId = selectedSessionId) {
-    const nextSession = getSessionById(sessionId);
+    const nextSession = getSessionByIdFrom(sessionId, availableSessions);
     setSelectedStudioId(nextSession.studioId);
     setSelectedSessionId(nextSession.id);
     setAccepted(false);
@@ -334,12 +699,65 @@ export default function AuraPrototype() {
   }
 
   function openMaps(studio: Studio, mode: "search" | "directions" = "directions") {
-    window.open(buildMapsUrl(studio, mode), "_blank", "noopener,noreferrer");
+    window.open(studio.googleMapsUri ?? buildMapsUrl(studio, mode), "_blank", "noopener,noreferrer");
+  }
+
+  async function refreshPlaces() {
+    if (!googleMapsKey) {
+      setPlacesStatus("needs-key");
+      notify("أضف مفتاح Google Maps أولاً");
+      return;
+    }
+
+    setPlacesStatus("loading");
+    setPlacesError(null);
+
+    try {
+      const nextStudios = await fetchRiyadhStudiosFromGoogle(googleMapsKey, placesQuery);
+      if (!nextStudios.length) {
+        setPlacesStatus("error");
+        setPlacesError("لم نجد نتائج مناسبة في الرياض لهذا البحث");
+        return;
+      }
+
+      const nextSessions = buildAvailableSessions(nextStudios);
+      setGoogleStudios(nextStudios);
+      setSelectedStudioId(nextStudios[0].id);
+      setSelectedSessionId(nextSessions[0].id);
+      setPlacesLastUpdated(new Intl.DateTimeFormat("ar-SA", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date()));
+      setPlacesStatus("ready");
+      notify(`تم جلب ${nextStudios.length} مركز من Google`);
+    } catch (error) {
+      setPlacesStatus("error");
+      setPlacesError(
+        error instanceof Error
+          ? error.message
+          : "تعذر الاتصال بـ Google Places",
+      );
+    }
+  }
+
+  function saveGoogleMapsKey(value: string) {
+    const trimmedValue = value.trim();
+    setGoogleMapsKey(trimmedValue);
+    if (trimmedValue) {
+      window.localStorage.setItem("auraGoogleMapsKey", trimmedValue);
+      setPlacesStatus("idle");
+      notify("تم حفظ مفتاح Google Maps");
+      return;
+    }
+
+    window.localStorage.removeItem("auraGoogleMapsKey");
+    setGoogleStudios([]);
+    setPlacesStatus("needs-key");
   }
 
   function addToCalendar() {
     window.open(
-      buildCalendarUrl(selectedSession, getStudioById(selectedSession.studioId)),
+      buildCalendarUrl(selectedSession, getStudioByIdFrom(selectedSession.studioId, availableStudios)),
       "_blank",
       "noopener,noreferrer",
     );
@@ -372,16 +790,26 @@ export default function AuraPrototype() {
   }
 
   const actions: AuraActions = {
+    availableStudios,
+    availableSessions,
     selectedStudio,
     selectedSession,
     favoriteStudioIds,
     booking,
     paymentMethod,
+    placesStatus,
+    placesError,
+    placesQuery,
+    googleMapsKey,
+    placesLastUpdated,
     selectStudio,
     selectSession,
     startBooking,
     toggleFavorite,
     openMaps,
+    refreshPlaces,
+    setPlacesQuery,
+    saveGoogleMapsKey,
     addToCalendar,
     cancelBooking,
     notify,
@@ -550,7 +978,9 @@ function DesktopSidebar({
   current: Screen;
   onGo: (screen: Screen) => void;
 }) {
-  const sidebarSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
+  const sidebarSession = actions.booking
+    ? getSessionByIdFrom(actions.booking.sessionId, actions.availableSessions)
+    : actions.selectedSession;
   const navItems: Array<{ id: Screen; label: string; icon: ReactNode }> = [
     { id: "home", label: "الرئيسية", icon: <Home size={18} /> },
     { id: "explore", label: "استكشاف", icon: <Search size={18} /> },
@@ -637,8 +1067,10 @@ function DesktopHomeScreen({
   actions: AuraActions;
   onGo: (screen: Screen) => void;
 }) {
-  const nextSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
-  const nextStudio = getStudioById(nextSession.studioId);
+  const nextSession = actions.booking
+    ? getSessionByIdFrom(actions.booking.sessionId, actions.availableSessions)
+    : actions.selectedSession;
+  const nextStudio = getStudioByIdFrom(nextSession.studioId, actions.availableStudios);
   const quickIntents = [
     { label: "اليوم", hint: "جلسات متاحة", icon: <Clock3 size={18} /> },
     { label: "قريب مني", hint: "حسب الموقع", icon: <MapPin size={18} /> },
@@ -685,7 +1117,7 @@ function DesktopHomeScreen({
       <section className="desktop-section">
         <SectionTitle title="مقترح لك اليوم" action="كل النتائج" onAction={() => onGo("explore")} />
         <div className="desktop-session-grid">
-          {sessions.map((session) => (
+          {actions.availableSessions.slice(0, 5).map((session) => (
             <DesktopSessionTile
               key={session.id}
               session={session}
@@ -698,7 +1130,7 @@ function DesktopHomeScreen({
       <section className="desktop-section">
         <SectionTitle title="مراكز قريبة منك" action="استكشف" onAction={() => onGo("explore")} />
         <div className="desktop-studio-grid">
-          {studios.map((studio) => (
+          {actions.availableStudios.map((studio) => (
             <DesktopStudioTile
               key={studio.id}
               studio={studio}
@@ -722,8 +1154,8 @@ function DesktopExploreScreen({
 }) {
   const filteredStudios =
     activity === "الكل"
-      ? studios
-      : studios.filter((studio) => studio.tags.includes(activity));
+      ? actions.availableStudios
+      : actions.availableStudios.filter((studio) => studio.tags.includes(activity));
 
   return (
     <div className="desktop-two-column">
@@ -732,8 +1164,19 @@ function DesktopExploreScreen({
         <p>اختر النشاط ثم افتح ملف المركز للحجز.</p>
         <div className="input-card">
           <Search size={18} aria-hidden="true" />
-          <input aria-label="بحث" placeholder="Pilates، Yoga، اسم مركز..." />
+          <input
+            aria-label="بحث"
+            onChange={(event) => actions.setPlacesQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                actions.refreshPlaces();
+              }
+            }}
+            placeholder="Pilates، Yoga، اسم مركز..."
+            value={actions.placesQuery}
+          />
         </div>
+        <PlacesDataPanel actions={actions} compact />
         <FilterGroup
           label="النشاط"
           value={activity}
@@ -788,7 +1231,7 @@ function DesktopStudioScreen({
   actions: AuraActions;
 }) {
   const studio = actions.selectedStudio;
-  const studioSessions = sessions.filter((session) => session.studioId === studio.id);
+  const studioSessions = actions.availableSessions.filter((session) => session.studioId === studio.id);
   const isFavorite = actions.favoriteStudioIds.includes(studio.id);
 
   return (
@@ -813,8 +1256,9 @@ function DesktopStudioScreen({
           </span>
         </div>
         <p className="studio-copy">
-          مركز للحركة الواعية يقدم بيلاتس ويوغا بمستويات مختلفة ومساحات تدريب
-          محدودة العدد.
+          {studio.source === "google"
+            ? "هذا الملف مبني من بيانات Google Places. الجلسات والأسعار داخل Aura تبقى قابلة لاعتماد المركز لاحقًا."
+            : "مركز للحركة الواعية يقدم بيلاتس ويوغا بمستويات مختلفة ومساحات تدريب محدودة العدد."}
         </p>
         <div className="facility-row" aria-label="المرافق">
           {studio.facilities.map((facility) => (
@@ -838,6 +1282,16 @@ function DesktopStudioScreen({
             <MapPin size={17} aria-hidden="true" />
             الاتجاهات
           </button>
+          {studio.website && (
+            <button
+              className="secondary-button"
+              onClick={() => window.open(studio.website, "_blank", "noopener,noreferrer")}
+              type="button"
+            >
+              <Search size={17} aria-hidden="true" />
+              الموقع
+            </button>
+          )}
         </div>
       </section>
 
@@ -849,6 +1303,7 @@ function DesktopStudioScreen({
           <span>يبدأ من</span>
           <strong>{studioSessions[0]?.price ?? actions.selectedSession.price} ر.س</strong>
         </div>
+        <GoogleMapPreview studio={studio} />
         <button
           className="primary-button full"
           onClick={() => actions.startBooking(studioSessions[0]?.id)}
@@ -873,7 +1328,7 @@ function DesktopScheduleScreen({
   const [selectedTime, setSelectedTime] = useState("04:00 م");
   const days = buildScheduleDays();
   const session = actions.selectedSession;
-  const studio = getStudioById(session.studioId);
+  const studio = getStudioByIdFrom(session.studioId, actions.availableStudios);
   const times = [
     { value: "04:00 م", status: "available" },
     { value: "04:30 م", status: "available" },
@@ -974,8 +1429,10 @@ function DesktopBookingsScreen({
   setBookingTab: (value: string) => void;
   onGo: (screen: Screen) => void;
 }) {
-  const bookingSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
-  const bookingStudio = getStudioById(bookingSession.studioId);
+  const bookingSession = actions.booking
+    ? getSessionByIdFrom(actions.booking.sessionId, actions.availableSessions)
+    : actions.selectedSession;
+  const bookingStudio = getStudioByIdFrom(bookingSession.studioId, actions.availableStudios);
   const hasConfirmedBooking = actions.booking?.status === "confirmed";
 
   return (
@@ -1185,8 +1642,10 @@ function HomeScreen({
   actions: AuraActions;
   onGo: (screen: Screen) => void;
 }) {
-  const nextSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
-  const nextStudio = getStudioById(nextSession.studioId);
+  const nextSession = actions.booking
+    ? getSessionByIdFrom(actions.booking.sessionId, actions.availableSessions)
+    : actions.selectedSession;
+  const nextStudio = getStudioByIdFrom(nextSession.studioId, actions.availableStudios);
   const quickIntents = [
     { label: "اليوم", hint: "جلسات قريبة", icon: <Clock3 size={17} /> },
     { label: "قريب مني", hint: "حسب الموقع", icon: <MapPin size={17} /> },
@@ -1242,7 +1701,7 @@ function HomeScreen({
         onAction={() => onGo("explore")}
       />
       <div className="session-stack">
-        {sessions.slice(0, 2).map((session) => (
+        {actions.availableSessions.slice(0, 2).map((session) => (
           <SessionCard
             key={session.id}
             session={session}
@@ -1258,23 +1717,23 @@ function HomeScreen({
       />
       <button
         className="studio-card"
-        onClick={() => actions.selectStudio(studios[0].id)}
+        onClick={() => actions.selectStudio(actions.availableStudios[0].id)}
         type="button"
       >
         <div
           className="studio-thumb"
-          style={{ backgroundImage: `url(${studios[0].image})` }}
+          style={{ backgroundImage: `url(${actions.availableStudios[0].image})` }}
           aria-hidden="true"
         />
         <div>
           <div className="studio-line">
-            <strong>{studios[0].name}</strong>
+            <strong>{actions.availableStudios[0].name}</strong>
             <span>
-              <Star size={13} fill="currentColor" aria-hidden="true" /> {studios[0].rating}
+              <Star size={13} fill="currentColor" aria-hidden="true" /> {actions.availableStudios[0].rating}
             </span>
           </div>
-          <p>{studios[0].tags}</p>
-          <small>{studios[0].area} - {studios[0].price}</small>
+          <p>{actions.availableStudios[0].tags}</p>
+          <small>{actions.availableStudios[0].area} - {actions.availableStudios[0].price}</small>
         </div>
       </button>
     </div>
@@ -1292,8 +1751,8 @@ function ExploreScreen({
 }) {
   const filteredStudios =
     activity === "الكل"
-      ? studios
-      : studios.filter((studio) => studio.tags.includes(activity));
+      ? actions.availableStudios
+      : actions.availableStudios.filter((studio) => studio.tags.includes(activity));
 
   return (
     <div className="screen-content">
@@ -1306,8 +1765,20 @@ function ExploreScreen({
 
       <div className="input-card">
         <Search size={18} aria-hidden="true" />
-        <input aria-label="بحث" placeholder="Pilates، Yoga، اسم مركز..." />
+        <input
+          aria-label="بحث"
+          onChange={(event) => actions.setPlacesQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              actions.refreshPlaces();
+            }
+          }}
+          placeholder="Pilates، Yoga، اسم مركز..."
+          value={actions.placesQuery}
+        />
       </div>
+
+      <PlacesDataPanel actions={actions} />
 
       <FilterGroup
         label="النشاط"
@@ -1345,7 +1816,7 @@ function StudioScreen({
   onGo: (screen: Screen) => void;
 }) {
   const studio = actions.selectedStudio;
-  const studioSessions = sessions.filter((session) => session.studioId === studio.id);
+  const studioSessions = actions.availableSessions.filter((session) => session.studioId === studio.id);
   const isFavorite = actions.favoriteStudioIds.includes(studio.id);
 
   return (
@@ -1388,8 +1859,9 @@ function StudioScreen({
       </div>
 
       <p className="studio-copy">
-        مركز بوتيك للحركة الواعية، يقدم جلسات بيلاتس ويوغا بمستويات مختلفة
-        ومساحات تدريب محدودة العدد.
+        {studio.source === "google"
+          ? "هذا الملف يعرض بيانات Google Places للمركز. اعتماد الجلسات والأسعار يتم لاحقًا من حساب المركز داخل Aura."
+          : "مركز بوتيك للحركة الواعية، يقدم جلسات بيلاتس ويوغا بمستويات مختلفة ومساحات تدريب محدودة العدد."}
       </p>
 
       <div className="facility-row" aria-label="المرافق">
@@ -1423,7 +1895,19 @@ function StudioScreen({
           <MessageCircle size={17} aria-hidden="true" />
           تواصل
         </button>
+        {studio.website && (
+          <button
+            className="secondary-button"
+            onClick={() => window.open(studio.website, "_blank", "noopener,noreferrer")}
+            type="button"
+          >
+            <Search size={17} aria-hidden="true" />
+            الموقع
+          </button>
+        )}
       </div>
+
+      <GoogleMapPreview studio={studio} />
 
       <section className="plain-section">
         <h3>عن المركز</h3>
@@ -1457,7 +1941,7 @@ function ScheduleScreen({
   const [selectedTime, setSelectedTime] = useState("04:00 م");
   const days = buildScheduleDays();
   const session = actions.selectedSession;
-  const studio = getStudioById(session.studioId);
+  const studio = getStudioByIdFrom(session.studioId, actions.availableStudios);
   const times = [
     { value: "04:00 م", status: "available" },
     { value: "04:30 م", status: "available" },
@@ -1555,7 +2039,7 @@ function SessionScreen({
   session: Session;
   onGo: (screen: Screen) => void;
 }) {
-  const studio = getStudioById(session.studioId);
+  const studio = getStudioByIdFrom(session.studioId, actions.availableStudios);
 
   return (
     <div className="screen-content session-detail">
@@ -1631,7 +2115,7 @@ function CheckoutScreen({
 }) {
   const vat = Math.round(session.price * 0.15);
   const total = session.price + vat;
-  const studio = getStudioById(session.studioId);
+  const studio = getStudioByIdFrom(session.studioId, actions.availableStudios);
 
   return (
     <div className="screen-content">
@@ -1768,7 +2252,7 @@ function SuccessScreen({
   session: Session;
   onGo: (screen: Screen) => void;
 }) {
-  const studio = getStudioById(session.studioId);
+  const studio = getStudioByIdFrom(session.studioId, actions.availableStudios);
   const bookingId = actions.booking?.id ?? "AUR-2481";
 
   return (
@@ -1827,8 +2311,10 @@ function BookingsScreen({
   setBookingTab: (value: string) => void;
   onGo: (screen: Screen) => void;
 }) {
-  const bookingSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
-  const bookingStudio = getStudioById(bookingSession.studioId);
+  const bookingSession = actions.booking
+    ? getSessionByIdFrom(actions.booking.sessionId, actions.availableSessions)
+    : actions.selectedSession;
+  const bookingStudio = getStudioByIdFrom(bookingSession.studioId, actions.availableStudios);
   const hasConfirmedBooking = actions.booking?.status === "confirmed";
 
   return (
@@ -1932,6 +2418,95 @@ function AccountScreen({ actions }: { actions: AuraActions }) {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function PlacesDataPanel({
+  actions,
+  compact,
+}: {
+  actions: AuraActions;
+  compact?: boolean;
+}) {
+  const [draftKey, setDraftKey] = useState(actions.googleMapsKey);
+  const isConnected = actions.placesStatus === "ready";
+  const isLoading = actions.placesStatus === "loading";
+  const needsKey = actions.placesStatus === "needs-key";
+
+  return (
+    <section className={compact ? "places-panel compact" : "places-panel"}>
+      <div>
+        <span className={isConnected ? "status-dot online" : "status-dot"} />
+        <strong>{isConnected ? "Google Places متصل" : "بيانات الرياض"}</strong>
+        <p>
+          {isConnected
+            ? `تم جلب ${actions.availableStudios.length} مركز من Google${actions.placesLastUpdated ? ` - ${actions.placesLastUpdated}` : ""}`
+            : "يعرض Aura بيانات احتياطية إلى أن تضيف مفتاح Google Maps."}
+        </p>
+      </div>
+
+      {needsKey && (
+        <div className="places-key-row">
+          <input
+            aria-label="Google Maps API Key"
+            onChange={(event) => setDraftKey(event.target.value)}
+            placeholder="Google Maps API Key"
+            type="password"
+            value={draftKey}
+          />
+          <button
+            className="secondary-button"
+            onClick={() => actions.saveGoogleMapsKey(draftKey)}
+            type="button"
+          >
+            ربط Google
+          </button>
+        </div>
+      )}
+
+      {actions.placesError && <small className="places-error">{actions.placesError}</small>}
+
+      <div className="places-actions">
+        <button
+          className="secondary-button"
+          disabled={isLoading}
+          onClick={actions.refreshPlaces}
+          type="button"
+        >
+          <Search size={16} aria-hidden="true" />
+          {isLoading ? "جاري الجلب..." : "بحث في Google"}
+        </button>
+        {actions.googleMapsKey && (
+          <button
+            className="ghost-button"
+            onClick={() => actions.saveGoogleMapsKey("")}
+            type="button"
+          >
+            فصل المفتاح
+          </button>
+        )}
+      </div>
+      <small className="google-attribution">Powered by Google</small>
+    </section>
+  );
+}
+
+function GoogleMapPreview({ studio }: { studio: Studio }) {
+  const query =
+    studio.lat && studio.lng
+      ? `${studio.lat},${studio.lng}`
+      : studio.mapQuery || studio.address || studio.name;
+  const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+
+  return (
+    <div className="map-preview">
+      <iframe
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        src={mapUrl}
+        title={`موقع ${studio.name} على Google Maps`}
+      />
     </div>
   );
 }

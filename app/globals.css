@@ -372,6 +372,103 @@ button {
   padding-inline: 14px;
 }
 
+.places-panel,
+.map-preview {
+  border: 1px solid var(--glass-line);
+  border-radius: 8px;
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
+}
+
+.places-panel {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 13px;
+}
+
+.places-panel.compact {
+  margin-bottom: 14px;
+}
+
+.places-panel strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+}
+
+.places-panel p,
+.places-panel small {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+  border-radius: 50%;
+  background: var(--sun);
+  box-shadow: 0 0 0 4px rgba(215, 182, 107, 0.14);
+}
+
+.status-dot.online {
+  background: var(--sage-dark);
+  box-shadow: 0 0 0 4px rgba(56, 102, 92, 0.12);
+}
+
+.places-key-row,
+.places-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.places-key-row input {
+  min-width: 0;
+  flex: 1 1 180px;
+  border: 1px solid rgba(68, 92, 82, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--ink);
+  padding: 0 12px;
+  min-height: 44px;
+  outline: 0;
+}
+
+.places-actions .secondary-button,
+.places-key-row .secondary-button {
+  min-height: 44px;
+}
+
+.places-error {
+  color: var(--clay) !important;
+  font-weight: 900;
+}
+
+.google-attribution {
+  justify-self: start;
+  font-weight: 900;
+}
+
+.map-preview {
+  height: 178px;
+  margin-top: 14px;
+  overflow: hidden;
+}
+
+.map-preview iframe {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+}
+
 .desktop-hero-actions .primary-button,
 .desktop-hero-actions .secondary-button {
   min-width: 160px;
@@ -1548,6 +1645,11 @@ button {
 .primary-button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+.secondary-button:disabled {
+  cursor: wait;
+  opacity: 0.58;
 }
 
 .secondary-button {

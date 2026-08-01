@@ -97,6 +97,13 @@ type AuraActions = {
   setPaymentMethod: (value: string) => void;
 };
 
+const candidateStudioImage =
+  "https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?auto=format&fit=crop&w=1200&q=80";
+const yogaCandidateImage =
+  "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1200&q=80";
+const reformerCandidateImage =
+  "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1200&q=80";
+
 const studios: Studio[] = [
   {
     id: "nova",
@@ -145,6 +152,396 @@ const studios: Studio[] = [
     image:
       "https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?auto=format&fit=crop&w=1200&q=80",
     mapQuery: "Balance Studio Pilates Al Nakheel Riyadh",
+  },
+  {
+    id: "club-pilates-takhassusi",
+    name: "Club Pilates Takhassusi",
+    rating: "جديد",
+    area: "التخصصي",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، Reformer، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "التخصصي، الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: reformerCandidateImage,
+    mapQuery: "Club Pilates Takhassusi Riyadh",
+  },
+  {
+    id: "club-pilates-ring-road",
+    name: "Club Pilates Ring road",
+    rating: "جديد",
+    area: "الرياض",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، Reformer، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: reformerCandidateImage,
+    mapQuery: "Club Pilates Ring road Riyadh",
+  },
+  {
+    id: "the-pilates-studio",
+    name: "The Pilates Studio",
+    rating: "جديد",
+    area: "الرياض",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: candidateStudioImage,
+    mapQuery: "The Pilates Studio Riyadh",
+  },
+  {
+    id: "auranov-pilates",
+    name: "Auranov Pilates Studio",
+    rating: "جديد",
+    area: "قرطبة",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "قرطبة، الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: candidateStudioImage,
+    mapQuery: "Auranov Pilates Studio Riyadh",
+  },
+  {
+    id: "pilates-plus",
+    name: "Pilates+",
+    rating: "جديد",
+    area: "الرياض",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: reformerCandidateImage,
+    mapQuery: "Pilates+ Riyadh",
+  },
+  {
+    id: "eluna-pilates",
+    name: "Eluna Pilates",
+    rating: "جديد",
+    area: "غرناطة",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "غرناطة، الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: candidateStudioImage,
+    mapQuery: "Eluna Pilates Riyadh",
+  },
+  {
+    id: "orna",
+    name: "Orna",
+    rating: "جديد",
+    area: "الخليج",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "الخليج، الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: candidateStudioImage,
+    mapQuery: "Orna Pilates Riyadh",
+  },
+  {
+    id: "solace-pilates",
+    name: "Solace Pilates",
+    rating: "جديد",
+    area: "الرياض",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: candidateStudioImage,
+    mapQuery: "Solace Pilates Riyadh",
+  },
+  {
+    id: "vialora-pilates",
+    name: "Vialora Pilates",
+    rating: "جديد",
+    area: "غرناطة",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "غرناطة، الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: reformerCandidateImage,
+    mapQuery: "Vialora Pilates Riyadh",
+  },
+  {
+    id: "in-form-pilates",
+    name: "In Form Pilates",
+    rating: "جديد",
+    area: "الرياض",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: reformerCandidateImage,
+    mapQuery: "In Form Pilates Riyadh",
+  },
+  {
+    id: "reform-athletica-dq",
+    name: "Reform Athletica DQ",
+    rating: "جديد",
+    area: "حي السفارات",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، لياقة، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "حي السفارات، الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: reformerCandidateImage,
+    mapQuery: "Reform Athletica DQ Riyadh",
+  },
+  {
+    id: "evolve-mind-body",
+    name: "EVOLVE mind&body",
+    rating: "جديد",
+    area: "الرياض",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، يوغا، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: yogaCandidateImage,
+    mapQuery: "EVOLVE mind&body Riyadh",
+  },
+  {
+    id: "slou-studio",
+    name: "Slou Studio",
+    rating: "جديد",
+    area: "الرياض",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، يوغا، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: yogaCandidateImage,
+    mapQuery: "Slou Studio Riyadh",
+  },
+  {
+    id: "retreat-pilates",
+    name: "Retreat Pilates Studio",
+    rating: "جديد",
+    area: "الرياض",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: candidateStudioImage,
+    mapQuery: "Retreat Pilates Studio Riyadh",
+  },
+  {
+    id: "pilova-fitness-pilates",
+    name: "Pilova Fitness and Pilates",
+    rating: "جديد",
+    area: "طويق",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، لياقة، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "طويق، الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: candidateStudioImage,
+    mapQuery: "Pilova Fitness and Pilates Riyadh",
+  },
+  {
+    id: "physiotherapy-pilates",
+    name: "Physiotherapy and Pilates studio",
+    rating: "جديد",
+    area: "عرقة",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، علاج طبيعي، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "عرقة، الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: candidateStudioImage,
+    mapQuery: "Physiotherapy and Pilates studio Riyadh",
+  },
+  {
+    id: "fzah-wellness",
+    name: "Fzah wellness",
+    rating: "جديد",
+    area: "عرقة",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، عافية، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "عرقة، الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: yogaCandidateImage,
+    mapQuery: "Fzah wellness Riyadh",
+  },
+  {
+    id: "fitness-time-ladies",
+    name: "Fitness Time Ladies",
+    rating: "جديد",
+    area: "الرياض",
+    distance: "ضمن الرياض",
+    tags: "لياقة، بيلاتس محتمل، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: candidateStudioImage,
+    mapQuery: "Fitness Time Ladies Pilates Riyadh",
+  },
+  {
+    id: "pure-yoga",
+    name: "Pure Yoga",
+    rating: "جديد",
+    area: "الرياض",
+    distance: "ضمن الرياض",
+    tags: "يوغا، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: yogaCandidateImage,
+    mapQuery: "Pure Yoga Riyadh",
+  },
+  {
+    id: "hala-fitness",
+    name: "Hala Fitness",
+    rating: "جديد",
+    area: "الرياض",
+    distance: "ضمن الرياض",
+    tags: "لياقة، بيلاتس محتمل، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: candidateStudioImage,
+    mapQuery: "Hala Fitness Riyadh",
+  },
+  {
+    id: "muscles-factory",
+    name: "Muscles Factory",
+    rating: "جديد",
+    area: "المونسية",
+    distance: "ضمن الرياض",
+    tags: "لياقة، بيلاتس محتمل، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "المونسية، الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: candidateStudioImage,
+    mapQuery: "Muscles Factory Riyadh",
+  },
+  {
+    id: "flexa-pilates",
+    name: "Flexa Pilates studio",
+    rating: "جديد",
+    area: "الياسمين",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "الياسمين، الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: reformerCandidateImage,
+    mapQuery: "Flexa Pilates studio Riyadh",
+  },
+  {
+    id: "nawapilate",
+    name: "Nawapilate Pilates studio",
+    rating: "جديد",
+    area: "الياسمين",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "الياسمين، الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: reformerCandidateImage,
+    mapQuery: "Nawapilate Pilates studio Riyadh",
+  },
+  {
+    id: "lily-pilates",
+    name: "lily pilates studio",
+    rating: "جديد",
+    area: "الرياض",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: candidateStudioImage,
+    mapQuery: "lily pilates studio Riyadh",
+  },
+  {
+    id: "weal-pilates",
+    name: "Weal Pilates Studio",
+    rating: "جديد",
+    area: "الرياض",
+    distance: "ضمن الرياض",
+    tags: "بيلاتس، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: candidateStudioImage,
+    mapQuery: "Weal Pilates Studio Riyadh",
+  },
+  {
+    id: "aurora-spa-hittin",
+    name: "Aurora Spa Hittin",
+    rating: "جديد",
+    area: "حطين",
+    distance: "ضمن الرياض",
+    tags: "عافية، بيلاتس محتمل، مركز مرشح",
+    price: "يحتاج استكمال",
+    address: "حطين، الرياض",
+    hours: "تحتاج استكمال",
+    phone: "تحتاج استكمال",
+    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    image: yogaCandidateImage,
+    mapQuery: "Aurora Spa Hittin Riyadh",
   },
 ];
 
@@ -246,12 +643,43 @@ const sessions: Session[] = [
   },
 ];
 
+function buildCandidateSession(studio: Studio): Session {
+  const isYoga = studio.tags.includes("يوغا");
+  const category = isYoga ? "يوغا" : "بيلاتس";
+
+  return {
+    id: `${studio.id}-intro`,
+    studioId: studio.id,
+    title: isYoga ? "Yoga Intro Session" : "Pilates Intro Session",
+    studio: studio.name,
+    area: studio.area,
+    time: "7:00 مساء",
+    date: "اليوم",
+    price: 100,
+    seats: 6,
+    level: "مناسب للجميع",
+    trainer: "فريق المركز",
+    image: studio.image,
+    duration: "50 دقيقة",
+    category,
+    description:
+      "جلسة تجريبية داخل البروتوتايب فقط. بيانات المركز والأسعار تحتاج تأكيد قبل اعتمادها في Aura.",
+  };
+}
+
+const allSessions: Session[] = [
+  ...sessions,
+  ...studios
+    .filter((studio) => !sessions.some((session) => session.studioId === studio.id))
+    .map(buildCandidateSession),
+];
+
 function getStudioById(studioId: string) {
   return studios.find((studio) => studio.id === studioId) ?? studios[0];
 }
 
 function getSessionById(sessionId: string) {
-  return sessions.find((session) => session.id === sessionId) ?? sessions[0];
+  return allSessions.find((session) => session.id === sessionId) ?? allSessions[0];
 }
 
 function buildCalendarUrl(session: Session, studio: Studio) {
@@ -295,7 +723,7 @@ export default function AuraPrototype() {
   }
 
   function selectStudio(studioId: string) {
-    const nextSession = sessions.find((session) => session.studioId === studioId) ?? sessions[0];
+    const nextSession = allSessions.find((session) => session.studioId === studioId) ?? allSessions[0];
     setSelectedStudioId(studioId);
     setSelectedSessionId(nextSession.id);
     setScreen("studio");
@@ -735,6 +1163,10 @@ function DesktopExploreScreen({
           <span>الفترة</span>
           <strong>اليوم مساءً</strong>
         </div>
+        <div className="desktop-filter-summary">
+          <span>مصدر القائمة</span>
+          <strong>أسماء مرشحة من الصور</strong>
+        </div>
       </aside>
 
       <section className="desktop-panel">
@@ -772,7 +1204,7 @@ function DesktopStudioScreen({
   actions: AuraActions;
 }) {
   const studio = actions.selectedStudio;
-  const studioSessions = sessions.filter((session) => session.studioId === studio.id);
+  const studioSessions = allSessions.filter((session) => session.studioId === studio.id);
   const isFavorite = actions.favoriteStudioIds.includes(studio.id);
 
   return (
@@ -1297,7 +1729,7 @@ function ExploreScreen({
 
       <div className="result-header">
         <strong>{filteredStudios.length} مراكز</strong>
-        <span>الأقرب أولاً</span>
+        <span>قائمة أولية تحتاج استكمال بيانات</span>
       </div>
 
       <div className="studio-result-list">
@@ -1321,7 +1753,7 @@ function StudioScreen({
   onGo: (screen: Screen) => void;
 }) {
   const studio = actions.selectedStudio;
-  const studioSessions = sessions.filter((session) => session.studioId === studio.id);
+  const studioSessions = allSessions.filter((session) => session.studioId === studio.id);
   const isFavorite = actions.favoriteStudioIds.includes(studio.id);
 
   return (

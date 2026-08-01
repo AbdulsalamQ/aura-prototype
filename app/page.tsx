@@ -91,7 +91,6 @@ type AuraActions = {
   selectSession: (sessionId: string) => void;
   startBooking: (sessionId?: string) => void;
   toggleFavorite: (studioId: string) => void;
-  openMaps: (studio: Studio, mode?: "search" | "directions") => void;
   addToCalendar: () => void;
   cancelBooking: () => void;
   notify: (message: string) => void;
@@ -255,14 +254,6 @@ function getSessionById(sessionId: string) {
   return sessions.find((session) => session.id === sessionId) ?? sessions[0];
 }
 
-function buildMapsUrl(studio: Studio, mode: "search" | "directions" = "search") {
-  const encodedQuery = encodeURIComponent(studio.mapQuery);
-  if (mode === "directions") {
-    return `https://www.google.com/maps/dir/?api=1&destination=${encodedQuery}`;
-  }
-  return `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`;
-}
-
 function buildCalendarUrl(session: Session, studio: Studio) {
   const text = encodeURIComponent(`${session.title} - Aura`);
   const location = encodeURIComponent(studio.address);
@@ -333,10 +324,6 @@ export default function AuraPrototype() {
     });
   }
 
-  function openMaps(studio: Studio, mode: "search" | "directions" = "directions") {
-    window.open(buildMapsUrl(studio, mode), "_blank", "noopener,noreferrer");
-  }
-
   function addToCalendar() {
     window.open(
       buildCalendarUrl(selectedSession, getStudioById(selectedSession.studioId)),
@@ -381,7 +368,6 @@ export default function AuraPrototype() {
     selectSession,
     startBooking,
     toggleFavorite,
-    openMaps,
     addToCalendar,
     cancelBooking,
     notify,
@@ -425,7 +411,6 @@ export default function AuraPrototype() {
           )}
           {screen === "checkout" && (
             <CheckoutScreen
-              actions={actions}
               accepted={accepted}
               setAccepted={setAccepted}
               session={selectedSession}
@@ -508,7 +493,6 @@ function DesktopExperience({
           {screen === "checkout" && (
             <DesktopSurface>
               <CheckoutScreen
-                actions={actions}
                 accepted={accepted}
                 setAccepted={setAccepted}
                 session={selectedSession}
@@ -829,14 +813,6 @@ function DesktopStudioScreen({
           >
             <Heart size={17} fill={isFavorite ? "currentColor" : "none"} aria-hidden="true" />
             {isFavorite ? "في المفضلة" : "إضافة للمفضلة"}
-          </button>
-          <button
-            className="secondary-button"
-            onClick={() => actions.openMaps(studio, "directions")}
-            type="button"
-          >
-            <MapPin size={17} aria-hidden="true" />
-            الاتجاهات
           </button>
         </div>
       </section>
@@ -1409,14 +1385,6 @@ function StudioScreen({
       <div className="inline-actions">
         <button
           className="secondary-button"
-          onClick={() => actions.openMaps(studio, "directions")}
-          type="button"
-        >
-          <MapPin size={17} aria-hidden="true" />
-          الاتجاهات
-        </button>
-        <button
-          className="secondary-button"
           onClick={() => actions.notify(`رقم المركز: ${studio.phone}`)}
           type="button"
         >
@@ -1617,13 +1585,11 @@ function SessionScreen({
 }
 
 function CheckoutScreen({
-  actions,
   session,
   accepted,
   setAccepted,
   onGo,
 }: {
-  actions: AuraActions;
   session: Session;
   accepted: boolean;
   setAccepted: (value: boolean) => void;
@@ -1639,7 +1605,6 @@ function CheckoutScreen({
         title="ملخص الحجز"
         subtitle="راجع التفاصيل قبل الدفع"
         action={<TicketCheck size={18} aria-hidden="true" />}
-        onAction={() => actions.openMaps(studio, "directions")}
       />
 
       <div className="booking-summary">
@@ -1797,14 +1762,6 @@ function SuccessScreen({
         <button className="secondary-button" onClick={actions.addToCalendar} type="button">
           <CalendarDays size={17} aria-hidden="true" />
           التقويم
-        </button>
-        <button
-          className="secondary-button"
-          onClick={() => actions.openMaps(studio, "directions")}
-          type="button"
-        >
-          <MapPin size={17} aria-hidden="true" />
-          الاتجاهات
         </button>
       </div>
 

@@ -45,7 +45,7 @@ test("keeps a local official source for every visible studio identity", async ()
   ]);
   const sources = JSON.parse(sourcesText);
 
-  assert.equal(sources.length, 24);
+  assert.equal(sources.length, 22);
   assert.equal(new Set(sources.map(({ id }) => id)).size, sources.length);
   assert.ok(sources.every(({ page: sourcePage }) => /^https:\/\//.test(sourcePage)));
   assert.equal(

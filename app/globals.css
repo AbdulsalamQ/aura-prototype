@@ -481,6 +481,26 @@ button {
   font-weight: 900;
 }
 
+.desktop-studio-tile-copy {
+  min-width: 0;
+}
+
+.desktop-studio-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+}
+
+.desktop-studio-title-row strong {
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.desktop-studio-title-row span {
+  white-space: nowrap;
+}
+
 .desktop-two-column,
 .desktop-studio-layout,
 .desktop-booking-layout {

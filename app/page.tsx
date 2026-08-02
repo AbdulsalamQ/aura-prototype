@@ -9,6 +9,7 @@ import {
   Clock3,
   CreditCard,
   Dumbbell,
+  ExternalLink,
   Heart,
   Home,
   Landmark,
@@ -16,7 +17,6 @@ import {
   MessageCircle,
   Search,
   ShieldCheck,
-  SlidersHorizontal,
   Star,
   TicketCheck,
   UserRound,
@@ -759,7 +759,7 @@ function buildCandidateSession(studio: Studio): Session {
     duration: "50 دقيقة",
     category,
     description:
-      "جلسة تجريبية داخل البروتوتايب فقط. بيانات المركز والأسعار تحتاج تأكيد قبل اعتمادها في Aura.",
+      "جلسة تعريفية تساعدك على تجربة أسلوب المركز والتعرف على المدرب قبل اختيار الجلسات المنتظمة.",
   };
 }
 
@@ -776,6 +776,48 @@ function getStudioById(studioId: string) {
 
 function getSessionById(sessionId: string) {
   return allSessions.find((session) => session.id === sessionId) ?? allSessions[0];
+}
+
+function getPublicStudioTags(studio: Studio) {
+  const hiddenTerms = ["مركز مرشح", "بيلاتس محتمل"];
+  const tags = studio.tags
+    .split("،")
+    .map((tag) => tag.trim())
+    .filter((tag) => tag && !hiddenTerms.includes(tag));
+
+  return tags.slice(0, 3).join("، ") || "جلسات حركة ولياقة";
+}
+
+function getPublicStudioFacilities(studio: Studio) {
+  const hiddenTerms = ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"];
+  const facilities = studio.facilities.filter((facility) => !hiddenTerms.includes(facility));
+
+  return facilities.length > 0 ? facilities : ["جلسات محدودة العدد", "حجز إلكتروني"];
+}
+
+function getPublicStudioPrice(studio: Studio) {
+  return studio.price.includes("يحتاج") ? "عرض المواعيد" : studio.price;
+}
+
+function getPublicStudioHours(studio: Studio) {
+  return studio.hours.includes("تحتاج") ? "تختلف حسب اليوم" : studio.hours;
+}
+
+function getNumericRating(studio: Studio) {
+  return /^\d(?:\.\d)?$/.test(studio.rating) ? studio.rating : null;
+}
+
+function matchesStudioSearch(studio: Studio, query: string) {
+  const normalizedQuery = query.trim().toLocaleLowerCase("ar");
+
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  return [studio.name, studio.area, studio.tags]
+    .join(" ")
+    .toLocaleLowerCase("ar")
+    .includes(normalizedQuery);
 }
 
 function getStudioPoint(studio: Studio) {
@@ -1358,10 +1400,13 @@ function DesktopExploreScreen({
   activity: string;
   setActivity: (value: string) => void;
 }) {
+  const [query, setQuery] = useState("");
   const filteredStudios =
     activity === "الكل"
-      ? actions.nearbyStudios
-      : actions.nearbyStudios.filter((studio) => studio.tags.includes(activity));
+      ? actions.nearbyStudios.filter((studio) => matchesStudioSearch(studio, query))
+      : actions.nearbyStudios.filter(
+          (studio) => studio.tags.includes(activity) && matchesStudioSearch(studio, query),
+        );
 
   return (
     <div className="desktop-two-column">
@@ -1370,7 +1415,12 @@ function DesktopExploreScreen({
         <p>اختر النشاط ثم افتح ملف المركز للحجز.</p>
         <div className="input-card">
           <Search size={18} aria-hidden="true" />
-          <input aria-label="بحث" placeholder="Pilates، Yoga، اسم مركز..." />
+          <input
+            aria-label="بحث"
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="ابحث باسم المركز أو الحي"
+            value={query}
+          />
         </div>
         <LocationPrompt actions={actions} />
         <FilterGroup
@@ -1387,12 +1437,8 @@ function DesktopExploreScreen({
           <strong>{actions.locationStatus === "ready" ? "الأقرب لموقعك" : "الأقرب تقديريًا"}</strong>
         </div>
         <div className="desktop-filter-summary">
-          <span>الفترة</span>
-          <strong>اليوم مساءً</strong>
-        </div>
-        <div className="desktop-filter-summary">
-          <span>مصدر القائمة</span>
-          <strong>أسماء مرشحة من الصور</strong>
+          <span>التوفر</span>
+          <strong>أقرب موعد متاح</strong>
         </div>
       </aside>
 
@@ -1402,16 +1448,8 @@ function DesktopExploreScreen({
             <span>{filteredStudios.length} مراكز</span>
             <h2>نتائج قريبة منك</h2>
           </div>
-          <button
-            className="secondary-button"
-            onClick={() => actions.notify("الفلاتر المتقدمة ستكون في النسخة التالية")}
-            type="button"
-          >
-            <SlidersHorizontal size={17} aria-hidden="true" />
-            الفلاتر
-          </button>
         </div>
-        <div className="desktop-studio-grid">
+        {filteredStudios.length > 0 ? <div className="desktop-studio-grid">
           {filteredStudios.map((studio) => (
             <DesktopStudioTile
               key={studio.id}
@@ -1420,7 +1458,7 @@ function DesktopExploreScreen({
               onSelect={actions.selectStudio}
             />
           ))}
-        </div>
+        </div> : <SearchEmptyState onReset={() => { setQuery(""); setActivity("الكل"); }} />}
       </section>
     </div>
   );
@@ -1463,16 +1501,16 @@ function DesktopStudioScreen({
               {studio.area} - {studio.distance}
             </p>
           </div>
-          <span className="rating-badge">
+          {getNumericRating(studio) ? <span className="rating-badge">
             <Star size={14} fill="currentColor" aria-hidden="true" /> {studio.rating}
-          </span>
+          </span> : null}
         </div>
         <p className="studio-copy">
           مركز للحركة الواعية يقدم بيلاتس ويوغا بمستويات مختلفة ومساحات تدريب
           محدودة العدد.
         </p>
         <div className="facility-row" aria-label="المرافق">
-          {studio.facilities.map((facility) => (
+          {getPublicStudioFacilities(studio).map((facility) => (
             <span key={facility}>{facility}</span>
           ))}
         </div>
@@ -1782,6 +1820,8 @@ function DesktopStudioTile({
   studio: Studio;
   onSelect: (studioId: string) => void;
 }) {
+  const rating = getNumericRating(studio);
+
   return (
     <button
       className="desktop-studio-tile"
@@ -1796,9 +1836,9 @@ function DesktopStudioTile({
       <div className="desktop-studio-tile-copy">
         <div className="desktop-studio-title-row">
           <strong>{studio.name}</strong>
-          <span>
+          {rating ? <span>
             <Star size={13} fill="currentColor" aria-hidden="true" /> {studio.rating}
-          </span>
+          </span> : null}
         </div>
         <p>{studio.area} - {distanceLabel ?? studio.distance}</p>
       </div>
@@ -1848,6 +1888,7 @@ function HomeScreen({
   const nextStudio = getStudioById(nextSession.studioId);
   const recommendedSessions = actions.nearbySessions.slice(0, 2);
   const nearestStudio = actions.nearbyStudios[0];
+  const nearestStudioRating = getNumericRating(nearestStudio);
   const quickIntents = [
     { label: "اليوم", hint: "جلسات قريبة", icon: <Clock3 size={17} /> },
     { label: "قريب مني", hint: "حسب الموقع", icon: <MapPin size={17} /> },
@@ -1934,11 +1975,11 @@ function HomeScreen({
         <div>
           <div className="studio-line">
             <strong>{nearestStudio.name}</strong>
-            <span>
+            {nearestStudioRating ? <span>
               <Star size={13} fill="currentColor" aria-hidden="true" /> {nearestStudio.rating}
-            </span>
+            </span> : null}
           </div>
-          <p>{nearestStudio.tags}</p>
+          <p>{getPublicStudioTags(nearestStudio)}</p>
           <small>{nearestStudio.area} - {actions.getDistanceLabel(nearestStudio)}</small>
         </div>
       </button>
@@ -1955,23 +1996,29 @@ function ExploreScreen({
   activity: string;
   setActivity: (value: string) => void;
 }) {
+  const [query, setQuery] = useState("");
   const filteredStudios =
     activity === "الكل"
-      ? actions.nearbyStudios
-      : actions.nearbyStudios.filter((studio) => studio.tags.includes(activity));
+      ? actions.nearbyStudios.filter((studio) => matchesStudioSearch(studio, query))
+      : actions.nearbyStudios.filter(
+          (studio) => studio.tags.includes(activity) && matchesStudioSearch(studio, query),
+        );
 
   return (
     <div className="screen-content">
       <AppHeader
         title="استكشاف"
         subtitle="ابحث حسب النشاط، الوقت، أو السعر"
-        action={<SlidersHorizontal size={18} aria-hidden="true" />}
-        onAction={() => actions.notify("الفلاتر المتقدمة ستكون في النسخة التالية")}
       />
 
       <div className="input-card">
         <Search size={18} aria-hidden="true" />
-        <input aria-label="بحث" placeholder="Pilates، Yoga، اسم مركز..." />
+        <input
+          aria-label="بحث"
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="ابحث باسم المركز أو الحي"
+          value={query}
+        />
       </div>
 
       <LocationPrompt actions={actions} compact />
@@ -1991,11 +2038,11 @@ function ExploreScreen({
         <span>
           {actions.locationStatus === "ready"
             ? "مرتبة حسب الأقرب لك"
-            : "قائمة أولية تحتاج استكمال بيانات"}
+            : "مرتبة حسب أقرب موعد متاح"}
         </span>
       </div>
 
-      <div className="studio-result-list">
+      {filteredStudios.length > 0 ? <div className="studio-result-list">
         {filteredStudios.map((studio) => (
           <StudioResultCard
             key={studio.id}
@@ -2004,7 +2051,7 @@ function ExploreScreen({
             onSelect={actions.selectStudio}
           />
         ))}
-      </div>
+      </div> : <SearchEmptyState onReset={() => { setQuery(""); setActivity("الكل"); }} />}
     </div>
   );
 }
@@ -2065,9 +2112,9 @@ function StudioScreen({
             {studio.area} - {studio.distance}
           </p>
         </div>
-        <span className="rating-badge">
+        {getNumericRating(studio) ? <span className="rating-badge">
           <Star size={14} fill="currentColor" aria-hidden="true" /> {studio.rating}
-        </span>
+        </span> : null}
       </div>
 
       <p className="studio-copy">
@@ -2076,15 +2123,15 @@ function StudioScreen({
       </p>
 
       <div className="facility-row" aria-label="المرافق">
-        {studio.facilities.map((facility) => (
+        {getPublicStudioFacilities(studio).map((facility) => (
           <span key={facility}>{facility}</span>
         ))}
       </div>
 
       <SectionTitle title="معلومات الحجز" action="حجز فوري" />
       <div className="studio-profile-grid">
-        <MiniStat icon={<Clock3 size={16} />} label={studio.hours} />
-        <MiniStat icon={<Dumbbell size={16} />} label={studio.tags} />
+        <MiniStat icon={<Clock3 size={16} />} label={getPublicStudioHours(studio)} />
+        <MiniStat icon={<Dumbbell size={16} />} label={getPublicStudioTags(studio)} />
         <MiniStat icon={<UserRound size={16} />} label="6 مدربين" />
         <MiniStat icon={<TicketCheck size={16} />} label="حجز فوري" />
       </div>
@@ -2098,22 +2145,22 @@ function StudioScreen({
           <MapPin size={17} aria-hidden="true" />
           الاتجاهات
         </button>
-        <button
+        {studio.imageSource ? <a
           className="secondary-button"
-          onClick={() => actions.notify(`رقم المركز: ${studio.phone}`)}
-          type="button"
+          href={studio.imageSource}
+          target="_blank"
+          rel="noreferrer"
         >
-          <MessageCircle size={17} aria-hidden="true" />
-          تواصل
-        </button>
+          <ExternalLink size={17} aria-hidden="true" />
+          الموقع الرسمي
+        </a> : null}
       </div>
 
       <section className="plain-section">
         <h3>عن المركز</h3>
         <p>
-          ملف المركز يجمع المعلومات الأساسية قبل الحجز: نوع الجلسات، مستوى
-          التجربة، المرافق، والموقع. اختَر الحجز عندما تكون مستعدًا لاختيار
-          اليوم والوقت.
+          تعرّف على نوع الجلسات والمرافق والموقع، ثم اختر اليوم والوقت المناسبين
+          لك بخطوات واضحة وسريعة.
         </p>
       </section>
 
@@ -2624,7 +2671,7 @@ function AppHeader({
 }: {
   title: string;
   subtitle: string;
-  action: ReactNode;
+  action?: ReactNode;
   onAction?: () => void;
 }) {
   return (
@@ -2633,7 +2680,7 @@ function AppHeader({
         <p>{subtitle}</p>
         <h2>{title}</h2>
       </div>
-      <button
+      {action ? <button
         className="icon-button"
         onClick={onAction}
         type="button"
@@ -2641,7 +2688,7 @@ function AppHeader({
         title={title}
       >
         {action}
-      </button>
+      </button> : null}
     </header>
   );
 }
@@ -2800,6 +2847,8 @@ function StudioResultCard({
   studio: Studio;
   onSelect: (studioId: string) => void;
 }) {
+  const rating = getNumericRating(studio);
+
   return (
     <button
       className="studio-result-card"
@@ -2814,21 +2863,36 @@ function StudioResultCard({
       <div className="studio-result-copy">
         <div className="studio-line">
           <strong>{studio.name}</strong>
-          <span>
+          {rating ? <span>
             <Star size={13} fill="currentColor" aria-hidden="true" />{" "}
             {studio.rating}
-          </span>
+          </span> : null}
         </div>
-        <p>{studio.tags}</p>
+        <p>{getPublicStudioTags(studio)}</p>
         <div className="studio-result-meta">
           <span>
             <MapPin size={14} aria-hidden="true" />
             {studio.area} - {distanceLabel ?? studio.distance}
           </span>
-          <b>{studio.price}</b>
+          <b>{getPublicStudioPrice(studio)}</b>
         </div>
       </div>
     </button>
+  );
+}
+
+function SearchEmptyState({ onReset }: { onReset: () => void }) {
+  return (
+    <div className="search-empty-state" role="status">
+      <span className="search-empty-icon">
+        <Search size={22} aria-hidden="true" />
+      </span>
+      <strong>لا توجد نتائج مطابقة</strong>
+      <p>جرّب اسمًا أقصر أو اعرض جميع الأنشطة.</p>
+      <button className="secondary-button" onClick={onReset} type="button">
+        عرض جميع المراكز
+      </button>
+    </div>
   );
 }
 

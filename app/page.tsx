@@ -51,6 +51,7 @@ type Studio = {
   phone: string;
   facilities: string[];
   image: string;
+  imageSource?: string;
   mapQuery: string;
 };
 
@@ -118,7 +119,7 @@ const yogaCandidateImage =
 const reformerCandidateImage =
   "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1200&q=80";
 
-const studios: Studio[] = [
+const rawStudios: Studio[] = [
   {
     id: "nova",
     name: "NOVA Movement",
@@ -559,6 +560,50 @@ const studios: Studio[] = [
   },
 ];
 
+const officialStudioSources: Record<string, string> = {
+  "club-pilates-takhassusi":
+    "https://apps.apple.com/sa/app/club-pilates-saudi-arabia/id6479696130",
+  "club-pilates-ring-road":
+    "https://apps.apple.com/sa/app/club-pilates-saudi-arabia/id6479696130",
+  "the-pilates-studio": "https://linktr.ee/thepilates.sa",
+  "auranov-pilates": "https://nonamemai8.setmore.com/",
+  "pilates-plus": "https://apps.apple.com/sa/app/p-ksa/id6746393998",
+  "eluna-pilates": "https://www.instagram.com/eluna.pilates/",
+  orna: "https://apps.apple.com/sa/app/orna-wellness-house/id6743322951",
+  "solace-pilates": "https://www.instagram.com/solacepilates.sa/",
+  "vialora-pilates": "https://www.instagram.com/vialora_pilates/",
+  "in-form-pilates": "https://www.instagram.com/in.form.sa/",
+  "reform-athletica-dq": "https://www.reformathletica.com/sa",
+  "evolve-mind-body": "https://www.instagram.com/evolvestudio.me/",
+  "slou-studio": "https://apps.apple.com/sa/app/slou-studio/id6768636998",
+  "retreat-pilates": "https://www.instagram.com/retreatsa/",
+  "pilova-fitness-pilates": "https://apps.apple.com/sa/app/pilova/id6751625707",
+  "fzah-wellness": "https://www.instagram.com/fzah.sa/",
+  "fitness-time-ladies":
+    "https://apps.apple.com/sa/app/fitness-time-%D9%88%D9%82%D8%AA-%D8%A7%D9%84%D9%84%D9%8A%D8%A7%D9%82%D8%A9/id6496972792",
+  "pure-yoga": "https://www.instagram.com/pureyogasa/",
+  "hala-fitness": "https://www.instagram.com/hala.cf/",
+  "muscles-factory": "https://www.instagram.com/musclesfactory.ksa/",
+  "flexa-pilates": "https://apps.apple.com/sa/app/flexa-pilates-studio/id6470425645",
+  nawapilate: "https://apps.apple.com/sa/app/nawa-pilates-studio/id6751629493",
+  "lily-pilates": "https://apps.apple.com/sa/app/lily-pilates/id6755492605",
+  "weal-pilates": "https://apps.apple.com/sa/app/weal-pilates/id6737240782",
+  "aurora-spa-hittin": "https://www.instagram.com/auroraspa.sa/",
+};
+
+const studioImageIds: Partial<Record<string, string>> = {
+  "club-pilates-takhassusi": "club-pilates",
+  "club-pilates-ring-road": "club-pilates",
+};
+
+const studios: Studio[] = rawStudios
+  .filter((studio) => officialStudioSources[studio.id])
+  .map((studio) => ({
+    ...studio,
+    image: `/studios/${studioImageIds[studio.id] ?? studio.id}.webp`,
+    imageSource: officialStudioSources[studio.id],
+  }));
+
 const studioCoordinates: Partial<Record<string, GeoPoint>> = {
   "auranov-pilates": { lat: 24.802, lng: 46.733 },
   "aurora-spa-hittin": { lat: 24.766, lng: 46.603 },
@@ -593,95 +638,90 @@ const studioCoordinates: Partial<Record<string, GeoPoint>> = {
 
 const sessions: Session[] = [
   {
-    id: "nova-reformer",
-    studioId: "nova",
+    id: "club-pilates-reformer",
+    studioId: "club-pilates-takhassusi",
     title: "Pilates Reformer",
-    studio: "NOVA Movement",
-    area: "العليا",
+    studio: "Club Pilates Takhassusi",
+    area: "التخصصي",
     time: "7:00 مساء",
     date: "اليوم",
     price: 120,
     seats: 4,
     level: "متوسط",
     trainer: "ليان",
-    image:
-      "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1000&q=80",
+    image: "/studios/club-pilates.webp",
     duration: "50 دقيقة",
     category: "بيلاتس",
     description:
       "جلسة Reformer تركّز على القوة، الاتزان، والتنفس بإيقاع مريح وعدد مقاعد محدود.",
   },
   {
-    id: "flow-vinyasa",
-    studioId: "flow",
+    id: "pure-yoga-vinyasa",
+    studioId: "pure-yoga",
     title: "Vinyasa Yoga",
-    studio: "Flow House",
-    area: "الملقا",
+    studio: "Pure Yoga",
+    area: "الرياض",
     time: "8:30 مساء",
     date: "اليوم",
     price: 95,
     seats: 7,
     level: "مناسب للجميع",
     trainer: "رامي",
-    image:
-      "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1000&q=80",
+    image: "/studios/pure-yoga.webp",
     duration: "60 دقيقة",
     category: "يوغا",
     description:
       "تدفق يوغا متوسط السرعة يوازن بين المرونة والتنفس والحركة المستمرة.",
   },
   {
-    id: "balance-mat",
-    studioId: "balance",
+    id: "the-pilates-studio-mat",
+    studioId: "the-pilates-studio",
     title: "Mat Pilates",
-    studio: "Balance Studio",
-    area: "النخيل",
+    studio: "The Pilates Studio",
+    area: "الرياض",
     time: "6:15 صباحا",
     date: "غدا",
     price: 80,
     seats: 5,
     level: "مبتدئ",
     trainer: "سارة",
-    image:
-      "https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?auto=format&fit=crop&w=1000&q=80",
+    image: "/studios/the-pilates-studio.webp",
     duration: "45 دقيقة",
     category: "بيلاتس",
     description:
       "جلسة Mat Pilates هادئة للمبتدئين تركّز على الثبات، العضلات العميقة، والتحكم.",
   },
   {
-    id: "nova-core",
-    studioId: "nova",
+    id: "reform-athletica-core",
+    studioId: "reform-athletica-dq",
     title: "Core Strength",
-    studio: "NOVA Movement",
-    area: "العليا",
+    studio: "Reform Athletica DQ",
+    area: "حي السفارات",
     time: "5:45 مساء",
     date: "غدا",
     price: 105,
     seats: 2,
     level: "متوسط",
     trainer: "نواف",
-    image:
-      "https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?auto=format&fit=crop&w=1000&q=80",
+    image: "/studios/reform-athletica-dq.webp",
     duration: "45 دقيقة",
     category: "بيلاتس",
     description:
       "تمارين مركزة للجزء الأوسط من الجسم مع انتقالات بسيطة ومناسبة لمن يبحث عن قوة أعلى.",
   },
   {
-    id: "flow-slow",
-    studioId: "flow",
+    id: "evolve-slow",
+    studioId: "evolve-mind-body",
     title: "Slow Flow Yoga",
-    studio: "Flow House",
-    area: "الملقا",
+    studio: "EVOLVE mind&body",
+    area: "الرياض",
     time: "9:00 مساء",
     date: "غدا",
     price: 90,
     seats: 8,
     level: "مناسب للجميع",
     trainer: "دانا",
-    image:
-      "https://images.unsplash.com/photo-1540206276207-3af25c08abc4?auto=format&fit=crop&w=1000&q=80",
+    image: "/studios/evolve-mind-body.webp",
     duration: "55 دقيقة",
     category: "يوغا",
     description:
@@ -812,15 +852,17 @@ export default function AuraPrototype() {
   const [accepted, setAccepted] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [bookingTab, setBookingTab] = useState("القادمة");
-  const [selectedStudioId, setSelectedStudioId] = useState("nova");
-  const [selectedSessionId, setSelectedSessionId] = useState("nova-reformer");
-  const [favoriteStudioIds, setFavoriteStudioIds] = useState<string[]>(["nova"]);
+  const [selectedStudioId, setSelectedStudioId] = useState("club-pilates-takhassusi");
+  const [selectedSessionId, setSelectedSessionId] = useState("club-pilates-reformer");
+  const [favoriteStudioIds, setFavoriteStudioIds] = useState<string[]>([
+    "club-pilates-takhassusi",
+  ]);
   const [paymentMethod, setPaymentMethod] = useState("Apple Pay");
   const [userLocation, setUserLocation] = useState<GeoPoint | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("idle");
   const [booking, setBooking] = useState<BookingRecord | null>({
     id: "AUR-2481",
-    sessionId: "nova-reformer",
+    sessionId: "club-pilates-reformer",
     status: "confirmed",
     createdAt: "2026-08-01T19:00:00+03:00",
   });
@@ -1395,6 +1437,17 @@ function DesktopStudioScreen({
           <div>
             <span className="kicker">مركز بوتيك</span>
             <h2>{studio.name}</h2>
+            {studio.imageSource ? (
+              <a
+                className="official-source-link"
+                href={studio.imageSource}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ShieldCheck size={14} aria-hidden="true" />
+                الهوية الرسمية للمركز
+              </a>
+            ) : null}
             <p>
               <MapPin size={15} aria-hidden="true" />
               {studio.area} - {studio.distance}
@@ -1984,6 +2037,17 @@ function StudioScreen({
       <div className="studio-info">
         <div>
           <h2>{studio.name}</h2>
+          {studio.imageSource ? (
+            <a
+              className="official-source-link"
+              href={studio.imageSource}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ShieldCheck size={14} aria-hidden="true" />
+              الهوية الرسمية للمركز
+            </a>
+          ) : null}
           <p>
             <MapPin size={15} aria-hidden="true" />
             {studio.area} - {studio.distance}

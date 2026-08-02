@@ -572,6 +572,22 @@ button {
   color: var(--muted);
 }
 
+.official-source-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  margin: 2px 0 6px;
+  color: var(--sage-dark);
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.official-source-link:hover {
+  text-decoration: underline;
+}
+
 .desktop-reserve-panel {
   position: sticky;
   top: 0;

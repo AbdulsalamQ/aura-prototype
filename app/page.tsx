@@ -54,6 +54,13 @@ type Studio = {
   mapQuery: string;
 };
 
+type GeoPoint = {
+  lat: number;
+  lng: number;
+};
+
+type LocationStatus = "idle" | "loading" | "ready" | "denied" | "unsupported";
+
 type Session = {
   id: string;
   studioId: string;
@@ -87,12 +94,18 @@ type AuraActions = {
   favoriteStudioIds: string[];
   booking: BookingRecord | null;
   paymentMethod: string;
+  userLocation: GeoPoint | null;
+  locationStatus: LocationStatus;
+  nearbyStudios: Studio[];
+  nearbySessions: Session[];
   selectStudio: (studioId: string) => void;
   selectSession: (sessionId: string) => void;
   startBooking: (sessionId?: string) => void;
   toggleFavorite: (studioId: string) => void;
   addToCalendar: () => void;
   openDirections: (studio: Studio) => void;
+  requestUserLocation: () => void;
+  getDistanceLabel: (studio: Studio) => string;
   cancelBooking: () => void;
   notify: (message: string) => void;
   setPaymentMethod: (value: string) => void;
@@ -546,6 +559,38 @@ const studios: Studio[] = [
   },
 ];
 
+const studioCoordinates: Partial<Record<string, GeoPoint>> = {
+  "auranov-pilates": { lat: 24.802, lng: 46.733 },
+  "aurora-spa-hittin": { lat: 24.766, lng: 46.603 },
+  balance: { lat: 24.754, lng: 46.64 },
+  "club-pilates-ring-road": { lat: 24.722, lng: 46.726 },
+  "club-pilates-takhassusi": { lat: 24.704, lng: 46.673 },
+  "eluna-pilates": { lat: 24.786, lng: 46.747 },
+  "evolve-mind-body": { lat: 24.762, lng: 46.76 },
+  "fitness-time-ladies": { lat: 24.62, lng: 46.741 },
+  "flexa-pilates": { lat: 24.819, lng: 46.645 },
+  flow: { lat: 24.805, lng: 46.599 },
+  "fzah-wellness": { lat: 24.668, lng: 46.586 },
+  "hala-fitness": { lat: 24.735, lng: 46.665 },
+  "in-form-pilates": { lat: 24.842, lng: 46.748 },
+  "lily-pilates": { lat: 24.724, lng: 46.754 },
+  "muscles-factory": { lat: 24.834, lng: 46.781 },
+  nawapilate: { lat: 24.813, lng: 46.643 },
+  nova: { lat: 24.713, lng: 46.675 },
+  orna: { lat: 24.779, lng: 46.797 },
+  "physiotherapy-pilates": { lat: 24.696, lng: 46.6 },
+  "pilates-plus": { lat: 24.785, lng: 46.754 },
+  "pilova-fitness-pilates": { lat: 24.602, lng: 46.548 },
+  "pure-yoga": { lat: 24.771, lng: 46.741 },
+  "reform-athletica-dq": { lat: 24.682, lng: 46.626 },
+  "retreat-pilates": { lat: 24.633, lng: 46.697 },
+  "slou-studio": { lat: 24.731, lng: 46.692 },
+  "solace-pilates": { lat: 24.752, lng: 46.786 },
+  "the-pilates-studio": { lat: 24.773, lng: 46.759 },
+  "vialora-pilates": { lat: 24.781, lng: 46.747 },
+  "weal-pilates": { lat: 24.713, lng: 46.748 },
+};
+
 const sessions: Session[] = [
   {
     id: "nova-reformer",
@@ -683,6 +728,68 @@ function getSessionById(sessionId: string) {
   return allSessions.find((session) => session.id === sessionId) ?? allSessions[0];
 }
 
+function getStudioPoint(studio: Studio) {
+  return studioCoordinates[studio.id] ?? { lat: 24.7136, lng: 46.6753 };
+}
+
+function getDistanceKm(from: GeoPoint, to: GeoPoint) {
+  const earthRadiusKm = 6371;
+  const latDistance = ((to.lat - from.lat) * Math.PI) / 180;
+  const lngDistance = ((to.lng - from.lng) * Math.PI) / 180;
+  const startLat = (from.lat * Math.PI) / 180;
+  const endLat = (to.lat * Math.PI) / 180;
+  const curve =
+    Math.sin(latDistance / 2) * Math.sin(latDistance / 2) +
+    Math.cos(startLat) *
+      Math.cos(endLat) *
+      Math.sin(lngDistance / 2) *
+      Math.sin(lngDistance / 2);
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(curve), Math.sqrt(1 - curve));
+}
+
+function sortStudiosByDistance(sourceStudios: Studio[], userLocation: GeoPoint | null) {
+  if (!userLocation) {
+    return sourceStudios;
+  }
+
+  return [...sourceStudios].sort(
+    (first, second) =>
+      getDistanceKm(userLocation, getStudioPoint(first)) -
+      getDistanceKm(userLocation, getStudioPoint(second)),
+  );
+}
+
+function sortSessionsByDistance(sourceSessions: Session[], userLocation: GeoPoint | null) {
+  if (!userLocation) {
+    return sourceSessions;
+  }
+
+  return [...sourceSessions].sort((first, second) => {
+    const firstStudio = getStudioById(first.studioId);
+    const secondStudio = getStudioById(second.studioId);
+
+    return (
+      getDistanceKm(userLocation, getStudioPoint(firstStudio)) -
+      getDistanceKm(userLocation, getStudioPoint(secondStudio))
+    );
+  });
+}
+
+function formatDistanceFromUser(studio: Studio, userLocation: GeoPoint | null) {
+  if (!userLocation) {
+    return studio.distance;
+  }
+
+  const distance = getDistanceKm(userLocation, getStudioPoint(studio));
+
+  if (distance < 1) {
+    return `${Math.round(distance * 1000)} م عنك`;
+  }
+
+  return `${distance.toFixed(1)} كم عنك`;
+}
+
 function buildCalendarUrl(session: Session, studio: Studio) {
   const text = encodeURIComponent(`${session.title} - Aura`);
   const location = encodeURIComponent(studio.address);
@@ -709,6 +816,8 @@ export default function AuraPrototype() {
   const [selectedSessionId, setSelectedSessionId] = useState("nova-reformer");
   const [favoriteStudioIds, setFavoriteStudioIds] = useState<string[]>(["nova"]);
   const [paymentMethod, setPaymentMethod] = useState("Apple Pay");
+  const [userLocation, setUserLocation] = useState<GeoPoint | null>(null);
+  const [locationStatus, setLocationStatus] = useState<LocationStatus>("idle");
   const [booking, setBooking] = useState<BookingRecord | null>({
     id: "AUR-2481",
     sessionId: "nova-reformer",
@@ -718,6 +827,8 @@ export default function AuraPrototype() {
   const [toast, setToast] = useState<string | null>(null);
   const selectedStudio = getStudioById(selectedStudioId);
   const selectedSession = getSessionById(selectedSessionId);
+  const nearbyStudios = sortStudiosByDistance(studios, userLocation);
+  const nearbySessions = sortSessionsByDistance(sessions, userLocation);
 
   function go(nextScreen: Screen) {
     setProcessing(false);
@@ -771,6 +882,40 @@ export default function AuraPrototype() {
     window.open(buildDirectionsUrl(studio), "_blank", "noopener,noreferrer");
   }
 
+  function requestUserLocation() {
+    if (!("geolocation" in navigator)) {
+      setLocationStatus("unsupported");
+      notify("المتصفح لا يدعم تحديد الموقع");
+      return;
+    }
+
+    setLocationStatus("loading");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        setLocationStatus("ready");
+        setScreen("explore");
+        notify("تم ترتيب المراكز حسب الأقرب لك");
+      },
+      (error) => {
+        setLocationStatus(error.code === error.PERMISSION_DENIED ? "denied" : "idle");
+        notify(
+          error.code === error.PERMISSION_DENIED
+            ? "لم يتم السماح باستخدام الموقع"
+            : "تعذر تحديد موقعك الآن",
+        );
+      },
+      { enableHighAccuracy: false, maximumAge: 300000, timeout: 8000 },
+    );
+  }
+
+  function getDistanceLabel(studio: Studio) {
+    return formatDistanceFromUser(studio, userLocation);
+  }
+
   function cancelBooking() {
     setBooking((current) => ({
       id: current?.id ?? "AUR-2481",
@@ -803,12 +948,18 @@ export default function AuraPrototype() {
     favoriteStudioIds,
     booking,
     paymentMethod,
+    userLocation,
+    locationStatus,
+    nearbyStudios,
+    nearbySessions,
     selectStudio,
     selectSession,
     startBooking,
     toggleFavorite,
     addToCalendar,
     openDirections,
+    requestUserLocation,
+    getDistanceLabel,
     cancelBooking,
     notify,
     setPaymentMethod,
@@ -1063,6 +1214,8 @@ function DesktopHomeScreen({
 }) {
   const nextSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
   const nextStudio = getStudioById(nextSession.studioId);
+  const recommendedSessions = actions.nearbySessions;
+  const nearbyStudios = actions.nearbyStudios;
   const quickIntents = [
     { label: "اليوم", hint: "جلسات متاحة", icon: <Clock3 size={18} /> },
     { label: "قريب مني", hint: "حسب الموقع", icon: <MapPin size={18} /> },
@@ -1096,7 +1249,9 @@ function DesktopHomeScreen({
           <button
             className="desktop-quick-card"
             key={intent.label}
-            onClick={() => onGo("explore")}
+            onClick={() =>
+              intent.label === "قريب مني" ? actions.requestUserLocation() : onGo("explore")
+            }
             type="button"
           >
             {intent.icon}
@@ -1109,7 +1264,7 @@ function DesktopHomeScreen({
       <section className="desktop-section">
         <SectionTitle title="مقترح لك اليوم" action="كل النتائج" onAction={() => onGo("explore")} />
         <div className="desktop-session-grid">
-          {sessions.map((session) => (
+          {recommendedSessions.map((session) => (
             <DesktopSessionTile
               key={session.id}
               session={session}
@@ -1120,11 +1275,18 @@ function DesktopHomeScreen({
       </section>
 
       <section className="desktop-section">
-        <SectionTitle title="مراكز قريبة منك" action="استكشف" onAction={() => onGo("explore")} />
+        <SectionTitle
+          title="مراكز قريبة منك"
+          action={actions.locationStatus === "ready" ? "استكشف" : "استخدم موقعي"}
+          onAction={() =>
+            actions.locationStatus === "ready" ? onGo("explore") : actions.requestUserLocation()
+          }
+        />
         <div className="desktop-studio-grid">
-          {studios.map((studio) => (
+          {nearbyStudios.slice(0, 6).map((studio) => (
             <DesktopStudioTile
               key={studio.id}
+              distanceLabel={actions.getDistanceLabel(studio)}
               studio={studio}
               onSelect={actions.selectStudio}
             />
@@ -1146,8 +1308,8 @@ function DesktopExploreScreen({
 }) {
   const filteredStudios =
     activity === "الكل"
-      ? studios
-      : studios.filter((studio) => studio.tags.includes(activity));
+      ? actions.nearbyStudios
+      : actions.nearbyStudios.filter((studio) => studio.tags.includes(activity));
 
   return (
     <div className="desktop-two-column">
@@ -1158,6 +1320,7 @@ function DesktopExploreScreen({
           <Search size={18} aria-hidden="true" />
           <input aria-label="بحث" placeholder="Pilates، Yoga، اسم مركز..." />
         </div>
+        <LocationPrompt actions={actions} />
         <FilterGroup
           label="النشاط"
           value={activity}
@@ -1169,7 +1332,7 @@ function DesktopExploreScreen({
         />
         <div className="desktop-filter-summary">
           <span>الترتيب</span>
-          <strong>الأقرب أولاً</strong>
+          <strong>{actions.locationStatus === "ready" ? "الأقرب لموقعك" : "الأقرب تقديريًا"}</strong>
         </div>
         <div className="desktop-filter-summary">
           <span>الفترة</span>
@@ -1200,6 +1363,7 @@ function DesktopExploreScreen({
           {filteredStudios.map((studio) => (
             <DesktopStudioTile
               key={studio.id}
+              distanceLabel={actions.getDistanceLabel(studio)}
               studio={studio}
               onSelect={actions.selectStudio}
             />
@@ -1547,9 +1711,11 @@ function DesktopSessionTile({
 }
 
 function DesktopStudioTile({
+  distanceLabel,
   studio,
   onSelect,
 }: {
+  distanceLabel?: string;
   studio: Studio;
   onSelect: (studioId: string) => void;
 }) {
@@ -1569,7 +1735,7 @@ function DesktopStudioTile({
           <Star size={13} fill="currentColor" aria-hidden="true" /> {studio.rating}
         </span>
         <strong>{studio.name}</strong>
-        <p>{studio.area} - {studio.distance}</p>
+        <p>{studio.area} - {distanceLabel ?? studio.distance}</p>
       </div>
     </button>
   );
@@ -1615,6 +1781,8 @@ function HomeScreen({
 }) {
   const nextSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
   const nextStudio = getStudioById(nextSession.studioId);
+  const recommendedSessions = actions.nearbySessions.slice(0, 2);
+  const nearestStudio = actions.nearbyStudios[0];
   const quickIntents = [
     { label: "اليوم", hint: "جلسات قريبة", icon: <Clock3 size={17} /> },
     { label: "قريب مني", hint: "حسب الموقع", icon: <MapPin size={17} /> },
@@ -1654,7 +1822,9 @@ function HomeScreen({
           <button
             className="quick-intent-card"
             key={intent.label}
-            onClick={() => onGo("explore")}
+            onClick={() =>
+              intent.label === "قريب مني" ? actions.requestUserLocation() : onGo("explore")
+            }
             type="button"
           >
             {intent.icon}
@@ -1670,7 +1840,7 @@ function HomeScreen({
         onAction={() => onGo("explore")}
       />
       <div className="session-stack">
-        {sessions.slice(0, 2).map((session) => (
+        {recommendedSessions.map((session) => (
           <SessionCard
             key={session.id}
             session={session}
@@ -1681,28 +1851,30 @@ function HomeScreen({
 
       <SectionTitle
         title="مراكز قريبة منك"
-        action="استكشف"
-        onAction={() => onGo("explore")}
+        action={actions.locationStatus === "ready" ? "استكشف" : "استخدم موقعي"}
+        onAction={() =>
+          actions.locationStatus === "ready" ? onGo("explore") : actions.requestUserLocation()
+        }
       />
       <button
         className="studio-card"
-        onClick={() => actions.selectStudio(studios[0].id)}
+        onClick={() => actions.selectStudio(nearestStudio.id)}
         type="button"
       >
         <div
           className="studio-thumb"
-          style={{ backgroundImage: `url(${studios[0].image})` }}
+          style={{ backgroundImage: `url(${nearestStudio.image})` }}
           aria-hidden="true"
         />
         <div>
           <div className="studio-line">
-            <strong>{studios[0].name}</strong>
+            <strong>{nearestStudio.name}</strong>
             <span>
-              <Star size={13} fill="currentColor" aria-hidden="true" /> {studios[0].rating}
+              <Star size={13} fill="currentColor" aria-hidden="true" /> {nearestStudio.rating}
             </span>
           </div>
-          <p>{studios[0].tags}</p>
-          <small>{studios[0].area} - {studios[0].price}</small>
+          <p>{nearestStudio.tags}</p>
+          <small>{nearestStudio.area} - {actions.getDistanceLabel(nearestStudio)}</small>
         </div>
       </button>
     </div>
@@ -1720,8 +1892,8 @@ function ExploreScreen({
 }) {
   const filteredStudios =
     activity === "الكل"
-      ? studios
-      : studios.filter((studio) => studio.tags.includes(activity));
+      ? actions.nearbyStudios
+      : actions.nearbyStudios.filter((studio) => studio.tags.includes(activity));
 
   return (
     <div className="screen-content">
@@ -1737,6 +1909,8 @@ function ExploreScreen({
         <input aria-label="بحث" placeholder="Pilates، Yoga، اسم مركز..." />
       </div>
 
+      <LocationPrompt actions={actions} compact />
+
       <FilterGroup
         label="النشاط"
         value={activity}
@@ -1749,13 +1923,18 @@ function ExploreScreen({
 
       <div className="result-header">
         <strong>{filteredStudios.length} مراكز</strong>
-        <span>قائمة أولية تحتاج استكمال بيانات</span>
+        <span>
+          {actions.locationStatus === "ready"
+            ? "مرتبة حسب الأقرب لك"
+            : "قائمة أولية تحتاج استكمال بيانات"}
+        </span>
       </div>
 
       <div className="studio-result-list">
         {filteredStudios.map((studio) => (
           <StudioResultCard
             key={studio.id}
+            distanceLabel={actions.getDistanceLabel(studio)}
             studio={studio}
             onSelect={actions.selectStudio}
           />
@@ -2445,6 +2624,64 @@ function SectionTitle({
   );
 }
 
+function LocationPrompt({
+  actions,
+  compact = false,
+}: {
+  actions: AuraActions;
+  compact?: boolean;
+}) {
+  const statusCopy: Record<LocationStatus, { title: string; description: string; action: string }> = {
+    denied: {
+      title: "الموقع غير مفعل",
+      description: "فعّل إذن الموقع من المتصفح لنقترح المراكز الأقرب لك.",
+      action: "حاول مجددًا",
+    },
+    idle: {
+      title: "اقترح الأقرب لك",
+      description: "استخدم موقعك لترتيب مراكز الرياض حسب المسافة.",
+      action: "استخدم موقعي",
+    },
+    loading: {
+      title: "جار تحديد موقعك",
+      description: "سيتم ترتيب النتائج تلقائيًا بعد السماح من المتصفح.",
+      action: "جار التحديد",
+    },
+    ready: {
+      title: "تم ترتيب النتائج",
+      description: "المراكز المعروضة الآن مرتبة حسب الأقرب إلى موقعك.",
+      action: "تحديث موقعي",
+    },
+    unsupported: {
+      title: "الموقع غير مدعوم",
+      description: "متصفحك الحالي لا يدعم تحديد الموقع.",
+      action: "غير متاح",
+    },
+  };
+  const copy = statusCopy[actions.locationStatus];
+  const disabled =
+    actions.locationStatus === "loading" || actions.locationStatus === "unsupported";
+
+  return (
+    <div className={compact ? "location-card compact" : "location-card"}>
+      <span>
+        <MapPin size={16} aria-hidden="true" />
+      </span>
+      <div>
+        <strong>{copy.title}</strong>
+        <p>{copy.description}</p>
+      </div>
+      <button
+        disabled={disabled}
+        onClick={actions.requestUserLocation}
+        type="button"
+      >
+        {copy.action}
+      </button>
+    </div>
+  );
+}
+
 function SessionCard({
   session,
   onSelect,
@@ -2479,9 +2716,11 @@ function SessionCard({
 }
 
 function StudioResultCard({
+  distanceLabel,
   studio,
   onSelect,
 }: {
+  distanceLabel?: string;
   studio: Studio;
   onSelect: (studioId: string) => void;
 }) {
@@ -2508,7 +2747,7 @@ function StudioResultCard({
         <div className="studio-result-meta">
           <span>
             <MapPin size={14} aria-hidden="true" />
-            {studio.area} - {studio.distance}
+            {studio.area} - {distanceLabel ?? studio.distance}
           </span>
           <b>{studio.price}</b>
         </div>

@@ -600,7 +600,7 @@ const studios: Studio[] = rawStudios
   .filter((studio) => officialStudioSources[studio.id])
   .map((studio) => ({
     ...studio,
-    image: `/studios/${studioImageIds[studio.id] ?? studio.id}.webp`,
+    image: `studios/${studioImageIds[studio.id] ?? studio.id}.webp`,
     imageSource: officialStudioSources[studio.id],
   }));
 
@@ -649,7 +649,7 @@ const sessions: Session[] = [
     seats: 4,
     level: "متوسط",
     trainer: "ليان",
-    image: "/studios/club-pilates.webp",
+    image: "studios/club-pilates.webp",
     duration: "50 دقيقة",
     category: "بيلاتس",
     description:
@@ -667,7 +667,7 @@ const sessions: Session[] = [
     seats: 7,
     level: "مناسب للجميع",
     trainer: "رامي",
-    image: "/studios/pure-yoga.webp",
+    image: "studios/pure-yoga.webp",
     duration: "60 دقيقة",
     category: "يوغا",
     description:
@@ -685,7 +685,7 @@ const sessions: Session[] = [
     seats: 5,
     level: "مبتدئ",
     trainer: "سارة",
-    image: "/studios/the-pilates-studio.webp",
+    image: "studios/the-pilates-studio.webp",
     duration: "45 دقيقة",
     category: "بيلاتس",
     description:
@@ -703,7 +703,7 @@ const sessions: Session[] = [
     seats: 2,
     level: "متوسط",
     trainer: "نواف",
-    image: "/studios/reform-athletica-dq.webp",
+    image: "studios/reform-athletica-dq.webp",
     duration: "45 دقيقة",
     category: "بيلاتس",
     description:
@@ -721,7 +721,7 @@ const sessions: Session[] = [
     seats: 8,
     level: "مناسب للجميع",
     trainer: "دانا",
-    image: "/studios/evolve-mind-body.webp",
+    image: "studios/evolve-mind-body.webp",
     duration: "55 دقيقة",
     category: "يوغا",
     description:

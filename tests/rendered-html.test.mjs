@@ -32,7 +32,7 @@ test("server-renders the Aura booking experience", async () => {
   assert.match(html, /<title>Aura \| نموذج حجوزات البيلاتس واليوغا<\/title>/i);
   assert.match(html, /حصة الدويغري/);
   assert.match(html, /Club Pilates Takhassusi/);
-  assert.match(html, /\/studios\/club-pilates\.webp/);
+  assert.match(html, /studios\/club-pilates\.webp/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview/);
 });
 
@@ -55,5 +55,5 @@ test("keeps a local official source for every visible studio identity", async ()
 
   assert.match(page, /officialStudioSources/);
   assert.match(page, /الهوية الرسمية للمركز/);
-  assert.match(page, /\/studios\/\$\{studioImageIds\[studio\.id\] \?\? studio\.id\}\.webp/);
+  assert.match(page, /studios\/\$\{studioImageIds\[studio\.id\] \?\? studio\.id\}\.webp/);
 });

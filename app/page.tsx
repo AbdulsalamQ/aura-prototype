@@ -92,6 +92,7 @@ type AuraActions = {
   startBooking: (sessionId?: string) => void;
   toggleFavorite: (studioId: string) => void;
   addToCalendar: () => void;
+  openDirections: (studio: Studio) => void;
   cancelBooking: () => void;
   notify: (message: string) => void;
   setPaymentMethod: (value: string) => void;
@@ -692,6 +693,12 @@ function buildCalendarUrl(session: Session, studio: Studio) {
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&location=${location}&details=${details}`;
 }
 
+function buildDirectionsUrl(studio: Studio) {
+  const destination = encodeURIComponent(studio.mapQuery || `${studio.name} ${studio.address}`);
+
+  return `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+}
+
 export default function AuraPrototype() {
   const [screen, setScreen] = useState<Screen>("home");
   const [activity, setActivity] = useState("الكل");
@@ -760,6 +767,10 @@ export default function AuraPrototype() {
     );
   }
 
+  function openDirections(studio: Studio) {
+    window.open(buildDirectionsUrl(studio), "_blank", "noopener,noreferrer");
+  }
+
   function cancelBooking() {
     setBooking((current) => ({
       id: current?.id ?? "AUR-2481",
@@ -797,6 +808,7 @@ export default function AuraPrototype() {
     startBooking,
     toggleFavorite,
     addToCalendar,
+    openDirections,
     cancelBooking,
     notify,
     setPaymentMethod,
@@ -1238,6 +1250,14 @@ function DesktopStudioScreen({
           ))}
         </div>
         <div className="inline-actions">
+          <button
+            className="secondary-button"
+            onClick={() => actions.openDirections(studio)}
+            type="button"
+          >
+            <MapPin size={17} aria-hidden="true" />
+            الاتجاهات
+          </button>
           <button
             className="secondary-button"
             onClick={() => actions.toggleFavorite(studio.id)}
@@ -1817,6 +1837,14 @@ function StudioScreen({
       <div className="inline-actions">
         <button
           className="secondary-button"
+          onClick={() => actions.openDirections(studio)}
+          type="button"
+        >
+          <MapPin size={17} aria-hidden="true" />
+          الاتجاهات
+        </button>
+        <button
+          className="secondary-button"
           onClick={() => actions.notify(`رقم المركز: ${studio.phone}`)}
           type="button"
         >
@@ -2194,6 +2222,14 @@ function SuccessScreen({
         <button className="secondary-button" onClick={actions.addToCalendar} type="button">
           <CalendarDays size={17} aria-hidden="true" />
           التقويم
+        </button>
+        <button
+          className="secondary-button"
+          onClick={() => actions.openDirections(studio)}
+          type="button"
+        >
+          <MapPin size={17} aria-hidden="true" />
+          الاتجاهات
         </button>
       </div>
 

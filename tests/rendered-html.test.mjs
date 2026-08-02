@@ -48,6 +48,10 @@ test("keeps a local official source for every visible studio identity", async ()
   assert.equal(sources.length, 24);
   assert.equal(new Set(sources.map(({ id }) => id)).size, sources.length);
   assert.ok(sources.every(({ page: sourcePage }) => /^https:\/\//.test(sourcePage)));
+  assert.equal(
+    sources.find(({ id }) => id === "hala-fitness")?.page,
+    "https://www.halacf.com/",
+  );
 
   await Promise.all(
     sources.flatMap(({ id }) => [
@@ -58,5 +62,6 @@ test("keeps a local official source for every visible studio identity", async ()
 
   assert.match(page, /officialStudioSources/);
   assert.match(page, /الهوية الرسمية للمركز/);
+  assert.match(page, /hala-fitness-cover-v3/);
   assert.match(page, /\$\{studio\.id\}-cover-v2/);
 });

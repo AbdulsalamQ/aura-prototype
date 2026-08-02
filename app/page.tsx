@@ -463,15 +463,15 @@ const rawStudios: Studio[] = [
   {
     id: "hala-fitness",
     name: "Hala Fitness",
-    rating: "جديد",
+    rating: "موثّق",
     area: "الرياض",
     distance: "ضمن الرياض",
-    tags: "لياقة، بيلاتس محتمل، مركز مرشح",
-    price: "يحتاج استكمال",
+    tags: "لياقة، حصص جماعية، تدريب خاص، للسيدات",
+    price: "عضويات 3، 6 أو 12 شهرًا",
     address: "الرياض",
-    hours: "تحتاج استكمال",
-    phone: "تحتاج استكمال",
-    facilities: ["مركز مرشح", "تحتاج تفاصيل", "حجز تجريبي"],
+    hours: "تحتاج تأكيد من المركز",
+    phone: "التواصل عبر الموقع الرسمي",
+    facilities: ["للسيدات", "مواقف Valet", "غرف تبديل", "دُش", "معدات حديثة"],
     image: candidateStudioImage,
     mapQuery: "Hala Fitness Riyadh",
   },
@@ -589,7 +589,7 @@ const officialStudioSources: Record<string, string> = {
   "fitness-time-ladies":
     "https://apps.apple.com/sa/app/fitness-time-%D9%88%D9%82%D8%AA-%D8%A7%D9%84%D9%84%D9%8A%D8%A7%D9%82%D8%A9/id6496972792",
   "pure-yoga": "https://www.instagram.com/pureyogasa/",
-  "hala-fitness": "https://www.instagram.com/hala.cf/",
+  "hala-fitness": "https://www.halacf.com/",
   "muscles-factory": "https://www.instagram.com/musclesfactory.ksa/",
   "flexa-pilates": "https://apps.apple.com/sa/app/flexa-pilates-studio/id6470425645",
   nawapilate: "https://apps.apple.com/sa/app/nawa-pilates-studio/id6751629493",
@@ -601,6 +601,7 @@ const officialStudioSources: Record<string, string> = {
 const studioImageIds: Partial<Record<string, string>> = {
   "club-pilates-takhassusi": "club-pilates-cover-v2",
   "club-pilates-ring-road": "club-pilates-cover-v2",
+  "hala-fitness": "hala-fitness-cover-v3",
 };
 
 const studios: Studio[] = rawStudios

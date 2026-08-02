@@ -602,6 +602,8 @@ const studioImageIds: Partial<Record<string, string>> = {
   "club-pilates-takhassusi": "club-pilates-cover-v2",
   "club-pilates-ring-road": "club-pilates-cover-v2",
   "hala-fitness": "hala-fitness-cover-v3",
+  orna: "orna-cover-v3",
+  "pilates-plus": "pilates-plus-cover-v3",
 };
 
 const studios: Studio[] = rawStudios

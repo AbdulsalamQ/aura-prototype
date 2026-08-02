@@ -63,5 +63,7 @@ test("keeps a local official source for every visible studio identity", async ()
   assert.match(page, /officialStudioSources/);
   assert.match(page, /الهوية الرسمية للمركز/);
   assert.match(page, /hala-fitness-cover-v3/);
+  assert.match(page, /orna-cover-v3/);
+  assert.match(page, /pilates-plus-cover-v3/);
   assert.match(page, /\$\{studio\.id\}-cover-v2/);
 });

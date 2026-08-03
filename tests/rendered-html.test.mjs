@@ -67,3 +67,14 @@ test("keeps a local official source for every visible studio identity", async ()
   assert.match(page, /pilates-plus-cover-v3/);
   assert.match(page, /\$\{studio\.id\}-cover-v2/);
 });
+
+test("includes the focused studio operations experience", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /إدارة المركز/);
+  assert.match(page, /الحجوزات/);
+  assert.match(page, /جدول الحصص/);
+  assert.match(page, /إضافة حصة/);
+  assert.match(page, /إضافة مدرب/);
+  assert.match(page, /تسجيل الحضور/);
+});

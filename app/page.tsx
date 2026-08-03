@@ -2,27 +2,35 @@
 
 import {
   Bell,
+  Building2,
+  CalendarPlus,
   CalendarDays,
   Check,
+  CheckCircle2,
   ChevronLeft,
   CircleUserRound,
   Clock3,
   CreditCard,
   Dumbbell,
   ExternalLink,
+  Eye,
   Heart,
   Home,
   Landmark,
   MapPin,
   MessageCircle,
+  Plus,
   Search,
   ShieldCheck,
   Star,
   TicketCheck,
+  UserPlus,
   UserRound,
+  Users,
   WalletCards,
+  X,
 } from "lucide-react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, FormEvent, ReactNode } from "react";
 import { useState } from "react";
 
 type Screen =
@@ -36,7 +44,8 @@ type Screen =
   | "payment"
   | "success"
   | "bookings"
-  | "account";
+  | "account"
+  | "management";
 
 type Studio = {
   id: string;
@@ -96,6 +105,40 @@ type BookingRecord = {
   createdAt: string;
 };
 
+type ManagementTab = "bookings" | "classes" | "trainers";
+type ManagedBookingStatus = "مؤكد" | "حضر" | "لم يحضر" | "ملغي";
+
+type ManagedBooking = {
+  id: string;
+  customer: string;
+  phone: string;
+  className: string;
+  date: string;
+  time: string;
+  trainer: string;
+  payment: "مدفوع" | "غير مدفوع";
+  status: ManagedBookingStatus;
+};
+
+type ManagedClass = {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  duration: string;
+  trainer: string;
+  capacity: number;
+  booked: number;
+};
+
+type ManagedTrainer = {
+  id: string;
+  name: string;
+  specialty: string;
+  phone: string;
+  active: boolean;
+};
+
 type AuraActions = {
   selectedStudio: Studio;
   selectedSession: Session;
@@ -116,6 +159,7 @@ type AuraActions = {
   getDistanceLabel: (studio: Studio) => string;
   cancelBooking: () => void;
   notify: (message: string) => void;
+  openManagement: () => void;
   setPaymentMethod: (value: string) => void;
 };
 
@@ -986,6 +1030,10 @@ export default function AuraPrototype() {
     notify("تم إلغاء الحجز في البروتوتايب");
   }
 
+  function openManagement() {
+    setScreen("management");
+  }
+
   function payNow() {
     setProcessing(true);
     window.setTimeout(() => {
@@ -1021,8 +1069,21 @@ export default function AuraPrototype() {
     getDistanceLabel,
     cancelBooking,
     notify,
+    openManagement,
     setPaymentMethod,
   };
+
+  if (screen === "management") {
+    return (
+      <main className="management-stage" dir="rtl">
+        <StudioManagementScreen
+          notify={notify}
+          onExit={() => setScreen("account")}
+        />
+        {toast && <div className="toast">{toast}</div>}
+      </main>
+    );
+  }
 
   return (
     <main className="aura-stage" dir="rtl">
@@ -1708,6 +1769,14 @@ function DesktopAccountScreen({ actions }: { actions: AuraActions }) {
           </div>
         </div>
         <div className="desktop-account-grid">
+          <button
+            className="menu-row management-entry"
+            onClick={actions.openManagement}
+            type="button"
+          >
+            <span><Building2 size={18} aria-hidden="true" /> إدارة المركز</span>
+            <ChevronLeft size={17} aria-hidden="true" />
+          </button>
           {["الملف الشخصي", "المفضلة", "طرق الدفع", "الإشعارات"].map((item) => (
             <button
               className="menu-row"
@@ -2581,8 +2650,291 @@ function BookingsScreen({
   );
 }
 
+const initialManagedBookings: ManagedBooking[] = [
+  {
+    id: "AUR-3104",
+    customer: "نورة العتيبي",
+    phone: "05X XXX 248",
+    className: "Pilates Reformer",
+    date: "اليوم",
+    time: "4:00 م",
+    trainer: "ليان",
+    payment: "مدفوع",
+    status: "مؤكد",
+  },
+  {
+    id: "AUR-3105",
+    customer: "سلمان الدوسري",
+    phone: "05X XXX 906",
+    className: "Mat Pilates",
+    date: "اليوم",
+    time: "5:30 م",
+    trainer: "سارة",
+    payment: "مدفوع",
+    status: "مؤكد",
+  },
+  {
+    id: "AUR-3106",
+    customer: "ريم القحطاني",
+    phone: "05X XXX 117",
+    className: "Pilates Reformer",
+    date: "اليوم",
+    time: "7:00 م",
+    trainer: "ليان",
+    payment: "غير مدفوع",
+    status: "مؤكد",
+  },
+  {
+    id: "AUR-3098",
+    customer: "خالد الشهري",
+    phone: "05X XXX 662",
+    className: "Core Strength",
+    date: "أمس",
+    time: "8:30 م",
+    trainer: "نواف",
+    payment: "مدفوع",
+    status: "حضر",
+  },
+  {
+    id: "AUR-3094",
+    customer: "هدى الغامدي",
+    phone: "05X XXX 431",
+    className: "Mat Pilates",
+    date: "أمس",
+    time: "6:00 م",
+    trainer: "سارة",
+    payment: "مدفوع",
+    status: "لم يحضر",
+  },
+];
+
+const initialManagedClasses: ManagedClass[] = [
+  { id: "CLS-21", title: "Pilates Reformer", date: "اليوم", time: "4:00 م", duration: "50 دقيقة", trainer: "ليان", capacity: 8, booked: 6 },
+  { id: "CLS-22", title: "Mat Pilates", date: "اليوم", time: "5:30 م", duration: "45 دقيقة", trainer: "سارة", capacity: 10, booked: 7 },
+  { id: "CLS-23", title: "Pilates Reformer", date: "اليوم", time: "7:00 م", duration: "50 دقيقة", trainer: "ليان", capacity: 8, booked: 8 },
+  { id: "CLS-24", title: "Core Strength", date: "غدًا", time: "6:30 م", duration: "45 دقيقة", trainer: "نواف", capacity: 8, booked: 3 },
+];
+
+const initialManagedTrainers: ManagedTrainer[] = [
+  { id: "TR-1", name: "ليان السالم", specialty: "Reformer Pilates", phone: "05X XXX 134", active: true },
+  { id: "TR-2", name: "سارة العبدالله", specialty: "Mat Pilates", phone: "05X XXX 587", active: true },
+  { id: "TR-3", name: "نواف الحربي", specialty: "Core & Mobility", phone: "05X XXX 920", active: true },
+];
+
+function getManagementStatusClass(status: ManagedBookingStatus) {
+  const classes: Record<ManagedBookingStatus, string> = {
+    "مؤكد": "status-confirmed",
+    "حضر": "status-attended",
+    "لم يحضر": "status-no-show",
+    "ملغي": "status-cancelled",
+  };
+  return classes[status];
+}
+
+function StudioManagementScreen({
+  notify,
+  onExit,
+}: {
+  notify: (message: string) => void;
+  onExit: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<ManagementTab>("bookings");
+  const [bookings, setBookings] = useState(initialManagedBookings);
+  const [classes, setClasses] = useState(initialManagedClasses);
+  const [trainers, setTrainers] = useState(initialManagedTrainers);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("الكل");
+  const [panel, setPanel] = useState<"class" | "trainer" | "booking" | null>(null);
+  const [selectedBookingId, setSelectedBookingId] = useState(initialManagedBookings[0].id);
+  const [newClass, setNewClass] = useState({
+    title: "Pilates Reformer",
+    date: "2026-08-04",
+    time: "18:00",
+    duration: "50 دقيقة",
+    trainer: initialManagedTrainers[0].name,
+    capacity: "8",
+  });
+  const [newTrainer, setNewTrainer] = useState({ name: "", specialty: "", phone: "" });
+
+  const filteredBookings = bookings.filter((booking) => {
+    const matchesQuery = `${booking.customer} ${booking.id} ${booking.className}`
+      .toLocaleLowerCase("ar")
+      .includes(query.trim().toLocaleLowerCase("ar"));
+    const matchesStatus = statusFilter === "الكل" || booking.status === statusFilter;
+    return matchesQuery && matchesStatus;
+  });
+  const selectedBooking = bookings.find((booking) => booking.id === selectedBookingId);
+
+  function updateBookingStatus(id: string, status: ManagedBookingStatus) {
+    setBookings((current) => current.map((booking) => booking.id === id ? { ...booking, status } : booking));
+    notify(`تم تحديث حالة الحجز إلى ${status}`);
+  }
+
+  function addClass(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trainerName = newClass.trainer.split(" ")[0];
+    setClasses((current) => [{
+      id: `CLS-${Date.now()}`,
+      title: newClass.title,
+      date: new Date(newClass.date).toLocaleDateString("ar-SA-u-ca-gregory", { day: "numeric", month: "long" }),
+      time: newClass.time,
+      duration: newClass.duration,
+      trainer: trainerName,
+      capacity: Number(newClass.capacity),
+      booked: 0,
+    }, ...current]);
+    setPanel(null);
+    notify("تمت إضافة الحصة الجديدة");
+  }
+
+  function addTrainer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setTrainers((current) => [...current, {
+      id: `TR-${Date.now()}`,
+      name: newTrainer.name,
+      specialty: newTrainer.specialty,
+      phone: newTrainer.phone || "لم يضف رقم تواصل",
+      active: true,
+    }]);
+    setNewTrainer({ name: "", specialty: "", phone: "" });
+    setPanel(null);
+    notify("تمت إضافة المدرب الجديد");
+  }
+
+  const tabs: Array<{ id: ManagementTab; label: string; icon: ReactNode }> = [
+    { id: "bookings", label: "الحجوزات", icon: <TicketCheck size={18} /> },
+    { id: "classes", label: "جدول الحصص", icon: <CalendarDays size={18} /> },
+    { id: "trainers", label: "المدربون", icon: <Users size={18} /> },
+  ];
+
+  return (
+    <div className="management-app">
+      <header className="management-header">
+        <div className="management-brand">
+          <span className="brand-mark">A</span>
+          <div><strong>Aura للمراكز</strong><small>Club Pilates Takhassusi</small></div>
+        </div>
+        <button className="management-exit" onClick={onExit} type="button">
+          العودة للتطبيق <ChevronLeft size={17} aria-hidden="true" />
+        </button>
+      </header>
+
+      <main className="management-main">
+        <div className="management-title-row">
+          <div><span>الاثنين، 3 أغسطس</span><h1>إدارة المركز</h1></div>
+          {activeTab === "classes" ? (
+            <button className="primary-button" onClick={() => setPanel("class")} type="button"><CalendarPlus size={18} /> إضافة حصة</button>
+          ) : activeTab === "trainers" ? (
+            <button className="primary-button" onClick={() => setPanel("trainer")} type="button"><UserPlus size={18} /> إضافة مدرب</button>
+          ) : null}
+        </div>
+
+        <nav className="management-tabs" aria-label="أقسام إدارة المركز">
+          {tabs.map((tab) => (
+            <button className={activeTab === tab.id ? "active" : ""} key={tab.id} onClick={() => setActiveTab(tab.id)} type="button">
+              {tab.icon}<span>{tab.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        {activeTab === "bookings" ? (
+          <section className="management-section">
+            <div className="management-toolbar">
+              <div className="management-search"><Search size={18} /><input aria-label="بحث الحجوزات" placeholder="اسم العميل أو رقم الحجز" value={query} onChange={(event) => setQuery(event.target.value)} /></div>
+              <div className="management-status-filters" aria-label="تصفية الحجوزات">
+                {["الكل", "مؤكد", "حضر", "لم يحضر", "ملغي"].map((status) => <button className={statusFilter === status ? "active" : ""} key={status} onClick={() => setStatusFilter(status)} type="button">{status}</button>)}
+              </div>
+            </div>
+            <div className="management-list-heading"><strong>{filteredBookings.length} حجوزات</strong><span>اضغط على الحجز لعرض التفاصيل وتحديث حالته</span></div>
+            <div className="management-booking-list">
+              <div className="management-booking-head"><span>العميل</span><span>الحصة</span><span>الموعد</span><span>الدفع</span><span>الحالة</span><span>الإجراء</span></div>
+              {filteredBookings.map((booking) => (
+                <article className="management-booking-row" key={booking.id}>
+                  <div className="management-customer"><span className="management-avatar">{booking.customer.charAt(0)}</span><span><strong>{booking.customer}</strong><small>{booking.id}</small></span></div>
+                  <div><strong>{booking.className}</strong><small>{booking.trainer}</small></div>
+                  <div><strong>{booking.date}</strong><small>{booking.time}</small></div>
+                  <span className={booking.payment === "مدفوع" ? "payment-paid" : "payment-pending"}>{booking.payment}</span>
+                  <span className={`booking-status ${getManagementStatusClass(booking.status)}`}>{booking.status}</span>
+                  <button className="management-view-button" aria-label={`عرض حجز ${booking.customer}`} onClick={() => { setSelectedBookingId(booking.id); setPanel("booking"); }} type="button"><Eye size={18} /><span>عرض</span></button>
+                </article>
+              ))}
+              {filteredBookings.length === 0 ? <SearchEmptyState onReset={() => { setQuery(""); setStatusFilter("الكل"); }} /> : null}
+            </div>
+          </section>
+        ) : null}
+
+        {activeTab === "classes" ? (
+          <section className="management-section">
+            <div className="management-list-heading"><strong>الحصص القادمة</strong><span>المواعيد والسعة الحالية لكل حصة</span></div>
+            <div className="management-class-list">
+              {classes.map((item) => (
+                <article className="management-class-row" key={item.id}>
+                  <div className="management-class-time"><strong>{item.time}</strong><span>{item.date}</span></div>
+                  <div><strong>{item.title}</strong><span>{item.duration} · المدرب {item.trainer}</span></div>
+                  <div className="management-capacity"><span>{item.booked} من {item.capacity} مقاعد</span><i><b style={{ width: `${Math.min(100, (item.booked / item.capacity) * 100)}%` }} /></i></div>
+                  <span className={item.booked >= item.capacity ? "class-full" : "class-open"}>{item.booked >= item.capacity ? "ممتلئة" : "متاحة"}</span>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {activeTab === "trainers" ? (
+          <section className="management-section">
+            <div className="management-list-heading"><strong>{trainers.length} مدربين</strong><span>المدربون المتاحون لإسناد الحصص</span></div>
+            <div className="management-trainer-grid">
+              {trainers.map((trainer) => (
+                <article className="management-trainer-card" key={trainer.id}>
+                  <span className="management-trainer-avatar">{trainer.name.charAt(0)}</span>
+                  <div><strong>{trainer.name}</strong><span>{trainer.specialty}</span><small>{trainer.phone}</small></div>
+                  <span className={trainer.active ? "trainer-active" : "trainer-inactive"}>{trainer.active ? "نشط" : "متوقف"}</span>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+      </main>
+
+      {panel ? <div className="management-overlay">
+        <aside className="management-panel" role="dialog" aria-modal="true" aria-label={panel === "class" ? "إضافة حصة" : panel === "trainer" ? "إضافة مدرب" : "تفاصيل الحجز"}>
+          <div className="management-panel-header">
+            <div><span>{panel === "booking" ? selectedBooking?.id : "Aura للمراكز"}</span><h2>{panel === "class" ? "إضافة حصة" : panel === "trainer" ? "إضافة مدرب" : "تفاصيل الحجز"}</h2></div>
+            <button className="icon-button" onClick={() => setPanel(null)} type="button" aria-label="إغلاق"><X size={19} /></button>
+          </div>
+
+          {panel === "booking" && selectedBooking ? <div className="management-booking-detail">
+            <div className="management-detail-person"><span className="management-trainer-avatar">{selectedBooking.customer.charAt(0)}</span><div><strong>{selectedBooking.customer}</strong><span>{selectedBooking.phone}</span></div></div>
+            <dl><div><dt>الحصة</dt><dd>{selectedBooking.className}</dd></div><div><dt>الموعد</dt><dd>{selectedBooking.date}، {selectedBooking.time}</dd></div><div><dt>المدرب</dt><dd>{selectedBooking.trainer}</dd></div><div><dt>الدفع</dt><dd>{selectedBooking.payment}</dd></div></dl>
+            <div className="management-status-actions">
+              <button className="primary-button" onClick={() => { updateBookingStatus(selectedBooking.id, "حضر"); setPanel(null); }} type="button"><CheckCircle2 size={18} /> تسجيل الحضور</button>
+              <button className="secondary-button" onClick={() => { updateBookingStatus(selectedBooking.id, "لم يحضر"); setPanel(null); }} type="button">لم يحضر</button>
+              <button className="ghost-button" onClick={() => { updateBookingStatus(selectedBooking.id, "ملغي"); setPanel(null); }} type="button">إلغاء الحجز</button>
+            </div>
+          </div> : null}
+
+          {panel === "class" ? <form className="management-form" onSubmit={addClass}>
+            <label><span>اسم الحصة</span><input required value={newClass.title} onChange={(event) => setNewClass({ ...newClass, title: event.target.value })} /></label>
+            <div className="management-form-grid"><label><span>التاريخ</span><input required type="date" value={newClass.date} onChange={(event) => setNewClass({ ...newClass, date: event.target.value })} /></label><label><span>الوقت</span><input required type="time" value={newClass.time} onChange={(event) => setNewClass({ ...newClass, time: event.target.value })} /></label></div>
+            <div className="management-form-grid"><label><span>المدة</span><select value={newClass.duration} onChange={(event) => setNewClass({ ...newClass, duration: event.target.value })}><option>45 دقيقة</option><option>50 دقيقة</option><option>60 دقيقة</option></select></label><label><span>عدد المقاعد</span><input min="1" required type="number" value={newClass.capacity} onChange={(event) => setNewClass({ ...newClass, capacity: event.target.value })} /></label></div>
+            <label><span>المدرب</span><select value={newClass.trainer} onChange={(event) => setNewClass({ ...newClass, trainer: event.target.value })}>{trainers.map((trainer) => <option key={trainer.id}>{trainer.name}</option>)}</select></label>
+            <button className="primary-button full" type="submit"><Plus size={18} /> إضافة الحصة</button>
+          </form> : null}
+
+          {panel === "trainer" ? <form className="management-form" onSubmit={addTrainer}>
+            <label><span>اسم المدرب</span><input required value={newTrainer.name} onChange={(event) => setNewTrainer({ ...newTrainer, name: event.target.value })} placeholder="الاسم الكامل" /></label>
+            <label><span>التخصص</span><input required value={newTrainer.specialty} onChange={(event) => setNewTrainer({ ...newTrainer, specialty: event.target.value })} placeholder="مثال: Reformer Pilates" /></label>
+            <label><span>رقم التواصل</span><input inputMode="tel" value={newTrainer.phone} onChange={(event) => setNewTrainer({ ...newTrainer, phone: event.target.value })} placeholder="05X XXX XXXX" /></label>
+            <button className="primary-button full" type="submit"><UserPlus size={18} /> إضافة المدرب</button>
+          </form> : null}
+        </aside>
+      </div> : null}
+    </div>
+  );
+}
+
 function AccountScreen({ actions }: { actions: AuraActions }) {
-  const rows = [
+  const rows: Array<{ icon: ReactNode; label: string; action?: () => void }> = [
+    { icon: <Building2 size={18} />, label: "إدارة المركز", action: actions.openManagement },
     { icon: <UserRound size={18} />, label: "الملف الشخصي" },
     { icon: <Heart size={18} />, label: "المفضلة" },
     { icon: <WalletCards size={18} />, label: "طرق الدفع" },
@@ -2613,7 +2965,7 @@ function AccountScreen({ actions }: { actions: AuraActions }) {
           <button
             className="menu-row"
             key={row.label}
-            onClick={() => actions.notify(`${row.label} ستكون صفحة مستقلة لاحقا`)}
+            onClick={row.action ?? (() => actions.notify(`${row.label} ستكون صفحة مستقلة لاحقا`))}
             type="button"
           >
             <span>

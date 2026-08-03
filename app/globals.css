@@ -3014,3 +3014,739 @@ input:focus-visible {
     color: #ffffff;
   }
 }
+
+/* Studio operations: one focused surface for bookings, classes, and trainers. */
+.management-stage {
+  width: 100%;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.management-app {
+  min-height: 100dvh;
+}
+
+.management-header {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--control-glass);
+  padding: 12px clamp(18px, 3vw, 44px);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.management-brand,
+.management-customer,
+.management-detail-person {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.management-brand strong,
+.management-brand small {
+  display: block;
+}
+
+.management-brand strong {
+  font-size: 18px;
+}
+
+.management-brand small,
+.management-title-row span,
+.management-panel-header span,
+.management-list-heading span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.management-exit {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface-solid);
+  padding: 0 14px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.management-main {
+  width: min(100%, 1440px);
+  margin: 0 auto;
+  padding: 32px clamp(18px, 3vw, 44px) 64px;
+}
+
+.management-title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.management-title-row h1 {
+  margin: 3px 0 0;
+  font-size: 32px;
+  line-height: 1.2;
+}
+
+.management-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 26px;
+}
+
+.management-tabs button {
+  min-width: 138px;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.management-tabs button.active {
+  border-bottom-color: var(--sage-dark);
+  color: var(--sage-dark);
+}
+
+.management-section {
+  animation: aura-view-in 260ms ease both;
+}
+
+.management-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.management-search {
+  width: min(100%, 380px);
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface-solid);
+  padding: 0 13px;
+  color: var(--muted);
+}
+
+.management-search:focus-within {
+  border-color: rgba(50, 103, 91, 0.35);
+  box-shadow: 0 0 0 4px rgba(50, 103, 91, 0.07);
+}
+
+.management-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.management-status-filters {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.management-status-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.management-status-filters button {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: transparent;
+  padding: 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.management-status-filters button.active {
+  border-color: rgba(50, 103, 91, 0.16);
+  background: rgba(50, 103, 91, 0.1);
+  color: var(--sage-dark);
+}
+
+.management-list-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.management-list-heading strong {
+  font-size: 17px;
+}
+
+.management-booking-list,
+.management-class-list {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-solid);
+}
+
+.management-booking-head,
+.management-booking-row {
+  display: grid;
+  grid-template-columns: minmax(170px, 1.3fr) minmax(160px, 1.2fr) minmax(100px, 0.7fr) 100px 100px 84px;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 16px;
+}
+
+.management-booking-head {
+  min-height: 46px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper-soft);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.management-booking-row {
+  min-height: 78px;
+  border-bottom: 1px solid var(--line);
+}
+
+.management-booking-row:last-child {
+  border-bottom: 0;
+}
+
+.management-booking-row:hover,
+.management-class-row:hover {
+  background: color-mix(in srgb, var(--paper-soft) 78%, transparent);
+}
+
+.management-booking-row strong,
+.management-booking-row small,
+.management-class-row strong,
+.management-class-row span,
+.management-trainer-card strong,
+.management-trainer-card span,
+.management-trainer-card small {
+  display: block;
+}
+
+.management-booking-row strong {
+  font-size: 14px;
+}
+
+.management-booking-row small,
+.management-trainer-card small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.management-avatar,
+.management-trainer-avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #e6f0eb;
+  color: var(--sage-dark);
+  font-weight: 900;
+}
+
+.payment-paid,
+.payment-pending,
+.booking-status,
+.class-full,
+.class-open,
+.trainer-active,
+.trainer-inactive {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.payment-paid,
+.status-attended,
+.class-open,
+.trainer-active {
+  background: #e6f3ec;
+  color: #2c6b55;
+}
+
+.payment-pending,
+.status-no-show {
+  background: #f7eedb;
+  color: #86621b;
+}
+
+.status-confirmed {
+  background: #e7eff6;
+  color: #3b6785;
+}
+
+.status-cancelled,
+.class-full,
+.trainer-inactive {
+  background: #f5e7e4;
+  color: #9a4f43;
+}
+
+.management-view-button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: transparent;
+  color: var(--sage-dark);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.management-class-row {
+  min-height: 86px;
+  display: grid;
+  grid-template-columns: 120px minmax(220px, 1fr) minmax(170px, 260px) 82px;
+  align-items: center;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 18px;
+}
+
+.management-class-row:last-child {
+  border-bottom: 0;
+}
+
+.management-class-row > div > span,
+.management-class-time span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.management-class-time strong {
+  font-size: 18px;
+}
+
+.management-capacity i {
+  height: 5px;
+  display: block;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--line);
+  margin-top: 8px;
+}
+
+.management-capacity i b {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: var(--sage-dark);
+}
+
+.management-trainer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.management-trainer-card {
+  min-height: 116px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--surface-solid);
+  padding: 15px;
+  box-shadow: var(--content-shadow);
+}
+
+.management-trainer-card > div > span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.management-trainer-avatar {
+  width: 48px;
+  height: 48px;
+  font-size: 19px;
+}
+
+.management-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: flex-start;
+  background: rgba(10, 17, 14, 0.38);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: management-overlay-in 180ms ease both;
+}
+
+@keyframes management-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.management-panel {
+  width: min(100%, 460px);
+  height: 100%;
+  overflow-y: auto;
+  border-left: 1px solid var(--line);
+  background: var(--surface-solid);
+  padding: 24px;
+  box-shadow: 20px 0 60px rgba(0, 0, 0, 0.22);
+  animation: management-panel-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes management-panel-in {
+  from { transform: translateX(28px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.management-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 18px;
+  margin-bottom: 22px;
+}
+
+.management-panel-header h2 {
+  margin: 3px 0 0;
+  font-size: 23px;
+}
+
+.management-detail-person {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 18px;
+}
+
+.management-detail-person strong,
+.management-detail-person span {
+  display: block;
+}
+
+.management-detail-person span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.management-booking-detail dl {
+  margin: 8px 0 24px;
+}
+
+.management-booking-detail dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--line);
+  padding: 13px 0;
+}
+
+.management-booking-detail dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.management-booking-detail dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.management-status-actions {
+  display: grid;
+  gap: 9px;
+}
+
+.management-form {
+  display: grid;
+  gap: 17px;
+}
+
+.management-form label,
+.management-form label > span {
+  display: block;
+}
+
+.management-form label > span {
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.management-form input,
+.management-form select {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--paper-soft);
+  color: var(--ink);
+  padding: 0 12px;
+  outline: 0;
+}
+
+.management-form input:focus,
+.management-form select:focus {
+  border-color: rgba(50, 103, 91, 0.4);
+  box-shadow: 0 0 0 4px rgba(50, 103, 91, 0.07);
+}
+
+.management-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.management-entry {
+  color: var(--sage-dark);
+}
+
+@media (max-width: 900px) {
+  .management-trainer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .management-booking-head {
+    display: none;
+  }
+
+  .management-booking-list {
+    display: grid;
+    gap: 10px;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .management-booking-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 13px;
+    border: 1px solid var(--line);
+    border-radius: 15px;
+    background: var(--surface-solid);
+    padding: 15px;
+  }
+
+  .management-customer {
+    grid-column: 1 / -1;
+  }
+
+  .management-booking-row > div:nth-child(2),
+  .management-booking-row > div:nth-child(3) {
+    min-width: 0;
+  }
+
+  .management-view-button {
+    min-width: 80px;
+  }
+}
+
+@media (max-width: 640px) {
+  .management-header {
+    min-height: 68px;
+    padding: 10px 14px;
+  }
+
+  .management-brand .brand-mark {
+    width: 42px;
+    height: 42px;
+    font-size: 22px;
+  }
+
+  .management-brand strong {
+    font-size: 15px;
+  }
+
+  .management-brand small {
+    font-size: 11px;
+  }
+
+  .management-exit {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+    font-size: 0;
+  }
+
+  .management-main {
+    padding: 22px 14px 42px;
+  }
+
+  .management-title-row {
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .management-title-row h1 {
+    font-size: 25px;
+  }
+
+  .management-title-row .primary-button {
+    min-height: 44px;
+    padding-inline: 12px;
+    font-size: 13px;
+  }
+
+  .management-tabs {
+    position: sticky;
+    top: 68px;
+    z-index: 12;
+    justify-content: stretch;
+    background: var(--paper);
+    margin: 0 -14px 20px;
+    padding: 0 8px;
+  }
+
+  .management-tabs button {
+    min-width: 0;
+    flex: 1 1 0;
+    padding-inline: 5px;
+    font-size: 12px;
+  }
+
+  .management-toolbar {
+    display: grid;
+  }
+
+  .management-search {
+    width: 100%;
+  }
+
+  .management-status-filters {
+    margin-inline: -14px;
+    padding-inline: 14px;
+  }
+
+  .management-list-heading {
+    display: grid;
+    gap: 2px;
+  }
+
+  .management-booking-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .management-booking-row .payment-paid,
+  .management-booking-row .payment-pending,
+  .management-booking-row .booking-status {
+    align-self: center;
+  }
+
+  .management-view-button {
+    min-height: 44px;
+    grid-column: 1 / -1;
+  }
+
+  .management-class-row {
+    grid-template-columns: 86px minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .management-capacity {
+    grid-column: 1 / -1;
+  }
+
+  .management-trainer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .management-panel {
+    width: 100%;
+    height: min(88dvh, 760px);
+    align-self: flex-end;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+    border-radius: 22px 22px 0 0;
+    padding: 20px 16px calc(24px + env(safe-area-inset-bottom));
+    animation-name: management-sheet-in;
+  }
+
+  @keyframes management-sheet-in {
+    from { transform: translateY(28px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .management-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .management-avatar,
+  .management-trainer-avatar,
+  .payment-paid,
+  .status-attended,
+  .class-open,
+  .trainer-active {
+    background: #22362d;
+  }
+
+  .payment-pending,
+  .status-no-show {
+    background: #3b3220;
+    color: #e1bc6b;
+  }
+
+  .status-confirmed {
+    background: #203443;
+    color: #8fc1df;
+  }
+
+  .status-cancelled,
+  .class-full,
+  .trainer-inactive {
+    background: #3a2623;
+    color: #e39888;
+  }
+}

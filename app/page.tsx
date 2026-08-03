@@ -2,7 +2,6 @@
 
 import {
   Bell,
-  Building2,
   CalendarPlus,
   CalendarDays,
   Check,
@@ -16,9 +15,7 @@ import {
   Eye,
   Heart,
   Home,
-  Landmark,
   MapPin,
-  MessageCircle,
   Plus,
   Search,
   ShieldCheck,
@@ -45,6 +42,10 @@ type Screen =
   | "success"
   | "bookings"
   | "account"
+  | "profile"
+  | "favorites"
+  | "payment-methods"
+  | "notifications"
   | "management";
 
 type Studio = {
@@ -105,6 +106,13 @@ type BookingRecord = {
   createdAt: string;
 };
 
+type UserProfile = {
+  fullName: string;
+  phone: string;
+  email: string;
+  birthDate: string;
+};
+
 type ManagementTab = "bookings" | "classes" | "trainers";
 type ManagedBookingStatus = "مؤكد" | "حضر" | "لم يحضر" | "ملغي";
 
@@ -142,9 +150,12 @@ type ManagedTrainer = {
 type AuraActions = {
   selectedStudio: Studio;
   selectedSession: Session;
+  userProfile: UserProfile;
   favoriteStudioIds: string[];
+  favoriteTrainerNames: string[];
   booking: BookingRecord | null;
   paymentMethod: string;
+  notificationsEnabled: boolean;
   userLocation: GeoPoint | null;
   locationStatus: LocationStatus;
   nearbyStudios: Studio[];
@@ -153,13 +164,15 @@ type AuraActions = {
   selectSession: (sessionId: string) => void;
   startBooking: (sessionId?: string) => void;
   toggleFavorite: (studioId: string) => void;
+  toggleFavoriteTrainer: (trainerName: string) => void;
   addToCalendar: () => void;
   openDirections: (studio: Studio) => void;
   requestUserLocation: () => void;
   getDistanceLabel: (studio: Studio) => string;
   cancelBooking: () => void;
   notify: (message: string) => void;
-  openManagement: () => void;
+  setUserProfile: (profile: UserProfile) => void;
+  setNotificationsEnabled: (value: boolean) => void;
   setPaymentMethod: (value: string) => void;
 };
 
@@ -918,6 +931,14 @@ export default function AuraPrototype() {
   const [favoriteStudioIds, setFavoriteStudioIds] = useState<string[]>([
     "club-pilates-takhassusi",
   ]);
+  const [favoriteTrainerNames, setFavoriteTrainerNames] = useState<string[]>(["ليان"]);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    fullName: "حصة الدويغري",
+    phone: "0511111111",
+    email: "hessa@example.com",
+    birthDate: "1997-05-18",
+  });
   const [paymentMethod, setPaymentMethod] = useState("Apple Pay");
   const [userLocation, setUserLocation] = useState<GeoPoint | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("idle");
@@ -970,6 +991,16 @@ export default function AuraPrototype() {
       const isSaved = current.includes(studioId);
       notify(isSaved ? "تمت إزالة المركز من المفضلة" : "تمت إضافة المركز للمفضلة");
       return isSaved ? current.filter((id) => id !== studioId) : [...current, studioId];
+    });
+  }
+
+  function toggleFavoriteTrainer(trainerName: string) {
+    setFavoriteTrainerNames((current) => {
+      const isSaved = current.includes(trainerName);
+      notify(isSaved ? "تمت إزالة المدرب من المفضلة" : "تمت إضافة المدرب للمفضلة");
+      return isSaved
+        ? current.filter((name) => name !== trainerName)
+        : [...current, trainerName];
     });
   }
 
@@ -1030,10 +1061,6 @@ export default function AuraPrototype() {
     notify("تم إلغاء الحجز في البروتوتايب");
   }
 
-  function openManagement() {
-    setScreen("management");
-  }
-
   function payNow() {
     setProcessing(true);
     window.setTimeout(() => {
@@ -1052,9 +1079,12 @@ export default function AuraPrototype() {
   const actions: AuraActions = {
     selectedStudio,
     selectedSession,
+    userProfile,
     favoriteStudioIds,
+    favoriteTrainerNames,
     booking,
     paymentMethod,
+    notificationsEnabled,
     userLocation,
     locationStatus,
     nearbyStudios,
@@ -1063,13 +1093,15 @@ export default function AuraPrototype() {
     selectSession,
     startBooking,
     toggleFavorite,
+    toggleFavoriteTrainer,
     addToCalendar,
     openDirections,
     requestUserLocation,
     getDistanceLabel,
     cancelBooking,
     notify,
-    openManagement,
+    setUserProfile,
+    setNotificationsEnabled,
     setPaymentMethod,
   };
 
@@ -1078,7 +1110,7 @@ export default function AuraPrototype() {
       <main className="management-stage" dir="rtl">
         <StudioManagementScreen
           notify={notify}
-          onExit={() => setScreen("account")}
+          onExit={() => setScreen("login")}
         />
         {toast && <div className="toast">{toast}</div>}
       </main>
@@ -1142,7 +1174,11 @@ export default function AuraPrototype() {
               onGo={go}
             />
           )}
-          {screen === "account" && <AccountScreen actions={actions} />}
+          {screen === "account" && <AccountScreen actions={actions} onGo={go} />}
+          {screen === "profile" && <ProfileScreen actions={actions} onGo={go} />}
+          {screen === "favorites" && <FavoritesScreen actions={actions} onGo={go} />}
+          {screen === "payment-methods" && <PaymentMethodsScreen actions={actions} onGo={go} />}
+          {screen === "notifications" && <NotificationsScreen actions={actions} onGo={go} />}
         </div>
 
         <BottomNav current={screen} onGo={go} />
@@ -1183,7 +1219,7 @@ function DesktopExperience({
     <>
       <DesktopSidebar actions={actions} current={screen} onGo={onGo} />
       <section className="desktop-main">
-        <DesktopTopbar actions={actions} onGo={onGo} />
+        <DesktopTopbar onGo={onGo} />
         <div className="desktop-view">
           {screen === "login" && <DesktopLoginScreen onGo={onGo} />}
           {screen === "home" && <DesktopHomeScreen actions={actions} onGo={onGo} />}
@@ -1229,7 +1265,11 @@ function DesktopExperience({
               onGo={onGo}
             />
           )}
-          {screen === "account" && <DesktopAccountScreen actions={actions} />}
+          {screen === "account" && <DesktopAccountScreen actions={actions} onGo={onGo} />}
+          {screen === "profile" && <DesktopSurface><ProfileScreen actions={actions} onGo={onGo} /></DesktopSurface>}
+          {screen === "favorites" && <DesktopSurface><FavoritesScreen actions={actions} onGo={onGo} /></DesktopSurface>}
+          {screen === "payment-methods" && <DesktopSurface narrow><PaymentMethodsScreen actions={actions} onGo={onGo} /></DesktopSurface>}
+          {screen === "notifications" && <DesktopSurface narrow><NotificationsScreen actions={actions} onGo={onGo} /></DesktopSurface>}
         </div>
       </section>
     </>
@@ -1252,6 +1292,7 @@ function DesktopSidebar({
     { id: "bookings", label: "حجوزاتي", icon: <TicketCheck size={18} /> },
     { id: "account", label: "حسابي", icon: <UserRound size={18} /> },
   ];
+  const accountScreens: Screen[] = ["account", "profile", "favorites", "payment-methods"];
 
   return (
     <aside className="desktop-sidebar">
@@ -1266,7 +1307,7 @@ function DesktopSidebar({
       <nav className="desktop-nav" aria-label="تنقل الكمبيوتر">
         {navItems.map((item) => (
           <button
-            className={current === item.id ? "active" : ""}
+            className={current === item.id || (item.id === "account" && accountScreens.includes(current)) ? "active" : ""}
             key={item.id}
             onClick={() => onGo(item.id)}
             type="button"
@@ -1290,10 +1331,8 @@ function DesktopSidebar({
 }
 
 function DesktopTopbar({
-  actions,
   onGo,
 }: {
-  actions: AuraActions;
   onGo: (screen: Screen) => void;
 }) {
   return (
@@ -1309,7 +1348,7 @@ function DesktopTopbar({
         </button>
         <button
           className="icon-button"
-          onClick={() => actions.notify("لا توجد إشعارات جديدة")}
+          onClick={() => onGo("notifications")}
           type="button"
           aria-label="الإشعارات"
           title="الإشعارات"
@@ -1757,44 +1796,46 @@ function DesktopBookingsScreen({
   );
 }
 
-function DesktopAccountScreen({ actions }: { actions: AuraActions }) {
+function DesktopAccountScreen({
+  actions,
+  onGo,
+}: {
+  actions: AuraActions;
+  onGo: (screen: Screen) => void;
+}) {
+  const rows: Array<{ icon: ReactNode; label: string; screen: Screen }> = [
+    { icon: <UserRound size={18} />, label: "الملف الشخصي", screen: "profile" },
+    { icon: <Heart size={18} />, label: "المفضلة", screen: "favorites" },
+    { icon: <WalletCards size={18} />, label: "طرق الدفع", screen: "payment-methods" },
+  ];
+
   return (
-    <div className="desktop-two-column">
-      <section className="desktop-panel">
+    <div className="desktop-account-view">
+      <section className="desktop-panel desktop-account-panel">
+        <div className="desktop-panel-heading">
+          <div><span>إعدادات العميل</span><h2>حسابي</h2></div>
+        </div>
         <div className="profile-card desktop-profile-card">
           <div className="avatar">ح</div>
           <div>
-            <strong>حصة الدويغري</strong>
-            <span>+966 5X XXX 214</span>
+            <strong>{actions.userProfile.fullName}</strong>
+            <span>عضو Aura</span>
           </div>
         </div>
         <div className="desktop-account-grid">
-          <button
-            className="menu-row management-entry"
-            onClick={actions.openManagement}
-            type="button"
-          >
-            <span><Building2 size={18} aria-hidden="true" /> إدارة المركز</span>
-            <ChevronLeft size={17} aria-hidden="true" />
-          </button>
-          {["الملف الشخصي", "المفضلة", "طرق الدفع", "الإشعارات"].map((item) => (
+          {rows.map((item) => (
             <button
               className="menu-row"
-              key={item}
-              onClick={() => actions.notify(`${item} ستكون صفحة مستقلة لاحقا`)}
+              key={item.label}
+              onClick={() => onGo(item.screen)}
               type="button"
             >
-              <span>{item}</span>
+              <span>{item.icon}{item.label}</span>
               <ChevronLeft size={17} aria-hidden="true" />
             </button>
           ))}
         </div>
       </section>
-      <aside className="desktop-panel desktop-reserve-panel">
-        <span className="kicker">الدعم</span>
-        <h3>المساعدة والخصوصية</h3>
-        <p>إدارة وسائل الدفع، الإشعارات، والشروط من مكان واحد.</p>
-      </aside>
     </div>
   );
 }
@@ -1988,7 +2029,8 @@ function HomeScreen({
         title="مساءك هادئ"
         subtitle="الرياض، حي العليا"
         action={<Bell size={18} aria-hidden="true" />}
-        onAction={() => actions.notify("لا توجد إشعارات جديدة")}
+        actionLabel="الإشعارات"
+        onAction={() => onGo("notifications")}
       />
 
       <button
@@ -2372,6 +2414,7 @@ function SessionScreen({
   onGo: (screen: Screen) => void;
 }) {
   const studio = getStudioById(session.studioId);
+  const isTrainerFavorite = actions.favoriteTrainerNames.includes(session.trainer);
 
   return (
     <div className="screen-content session-detail">
@@ -2405,6 +2448,19 @@ function SessionScreen({
         <MiniStat icon={<Clock3 size={16} />} label={session.time} />
         <MiniStat icon={<Dumbbell size={16} />} label={session.level} />
         <MiniStat icon={<UserRound size={16} />} label={`${session.trainer} - ${session.duration}`} />
+      </div>
+
+      <div className="trainer-summary">
+        <span className="trainer-avatar">{session.trainer.charAt(0)}</span>
+        <div><strong>{session.trainer}</strong><span>مدرب {session.category}</span></div>
+        <button
+          className="favorite-heart"
+          aria-label={isTrainerFavorite ? `إزالة ${session.trainer} من المفضلة` : `إضافة ${session.trainer} للمفضلة`}
+          onClick={() => actions.toggleFavoriteTrainer(session.trainer)}
+          type="button"
+        >
+          <Heart size={18} fill={isTrainerFavorite ? "currentColor" : "none"} />
+        </button>
       </div>
 
       <section className="plain-section">
@@ -2867,7 +2923,7 @@ function StudioManagementScreen({
           <div><strong>Aura للمراكز</strong><small>Club Pilates Takhassusi</small></div>
         </div>
         <button className="management-exit" onClick={onExit} type="button">
-          العودة للتطبيق <ChevronLeft size={17} aria-hidden="true" />
+          تسجيل الخروج <ChevronLeft size={17} aria-hidden="true" />
         </button>
       </header>
 
@@ -2984,31 +3040,34 @@ function StudioManagementScreen({
   );
 }
 
-function AccountScreen({ actions }: { actions: AuraActions }) {
-  const rows: Array<{ icon: ReactNode; label: string; action?: () => void }> = [
-    { icon: <Building2 size={18} />, label: "إدارة المركز", action: actions.openManagement },
-    { icon: <UserRound size={18} />, label: "الملف الشخصي" },
-    { icon: <Heart size={18} />, label: "المفضلة" },
-    { icon: <WalletCards size={18} />, label: "طرق الدفع" },
-    { icon: <Bell size={18} />, label: "الإشعارات" },
-    { icon: <MessageCircle size={18} />, label: "الدعم والمساعدة" },
-    { icon: <Landmark size={18} />, label: "الشروط والخصوصية" },
+function AccountScreen({
+  actions,
+  onGo,
+}: {
+  actions: AuraActions;
+  onGo: (screen: Screen) => void;
+}) {
+  const rows: Array<{ icon: ReactNode; label: string; screen: Screen }> = [
+    { icon: <UserRound size={18} />, label: "الملف الشخصي", screen: "profile" },
+    { icon: <Heart size={18} />, label: "المفضلة", screen: "favorites" },
+    { icon: <WalletCards size={18} />, label: "طرق الدفع", screen: "payment-methods" },
   ];
 
   return (
     <div className="screen-content">
       <AppHeader
         title="حسابي"
-        subtitle="حصة الدويغري"
+        subtitle={actions.userProfile.fullName}
         action={<CircleUserRound size={18} aria-hidden="true" />}
-        onAction={() => actions.notify("بيانات الحساب محفوظة في البروتوتايب")}
+        actionLabel="الملف الشخصي"
+        onAction={() => onGo("profile")}
       />
 
       <div className="profile-card">
         <div className="avatar">ح</div>
         <div>
-          <strong>حصة الدويغري</strong>
-          <span>+966 5X XXX 214</span>
+          <strong>{actions.userProfile.fullName}</strong>
+          <span>عضو Aura</span>
         </div>
       </div>
 
@@ -3017,7 +3076,7 @@ function AccountScreen({ actions }: { actions: AuraActions }) {
           <button
             className="menu-row"
             key={row.label}
-            onClick={row.action ?? (() => actions.notify(`${row.label} ستكون صفحة مستقلة لاحقا`))}
+            onClick={() => onGo(row.screen)}
             type="button"
           >
             <span>
@@ -3032,15 +3091,186 @@ function AccountScreen({ actions }: { actions: AuraActions }) {
   );
 }
 
+function ProfileScreen({
+  actions,
+  onGo,
+}: {
+  actions: AuraActions;
+  onGo: (screen: Screen) => void;
+}) {
+  const [profile, setProfile] = useState(actions.userProfile);
+
+  function saveProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    actions.setUserProfile(profile);
+    actions.notify("تم حفظ بيانات الملف الشخصي");
+  }
+
+  return (
+    <div className="screen-content account-detail-screen">
+      <AccountDetailHeader title="الملف الشخصي" subtitle="بياناتك الأساسية" onBack={() => onGo("account")} />
+      <div className="profile-identity">
+        <span className="avatar">ح</span>
+        <div><strong>{profile.fullName}</strong><span>يمكنك تحديث بياناتك في أي وقت</span></div>
+      </div>
+      <form className="account-form" onSubmit={saveProfile}>
+        <label>
+          <span>الاسم الكامل</span>
+          <input required value={profile.fullName} onChange={(event) => setProfile({ ...profile, fullName: event.target.value })} />
+        </label>
+        <label>
+          <span>رقم الهاتف</span>
+          <input inputMode="numeric" maxLength={10} required value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} />
+        </label>
+        <label>
+          <span>البريد الإلكتروني</span>
+          <input dir="ltr" required type="email" value={profile.email} onChange={(event) => setProfile({ ...profile, email: event.target.value })} />
+        </label>
+        <label>
+          <span>تاريخ الميلاد</span>
+          <input required type="date" value={profile.birthDate} onChange={(event) => setProfile({ ...profile, birthDate: event.target.value })} />
+        </label>
+        <button className="primary-button full" type="submit"><Check size={18} /> حفظ التغييرات</button>
+      </form>
+    </div>
+  );
+}
+
+function FavoritesScreen({
+  actions,
+  onGo,
+}: {
+  actions: AuraActions;
+  onGo: (screen: Screen) => void;
+}) {
+  const [tab, setTab] = useState<"studios" | "trainers">("studios");
+  const favoriteStudios = studios.filter((studio) => actions.favoriteStudioIds.includes(studio.id));
+  const trainers = Array.from(
+    new Map(
+      allSessions.map((session) => [
+        session.trainer,
+        { name: session.trainer, specialty: session.category, studio: session.studio },
+      ]),
+    ).values(),
+  ).filter((trainer) => actions.favoriteTrainerNames.includes(trainer.name));
+
+  return (
+    <div className="screen-content account-detail-screen">
+      <AccountDetailHeader title="المفضلة" subtitle="اختياراتك المحفوظة" onBack={() => onGo("account")} />
+      <div className="segmented favorites-tabs" aria-label="أقسام المفضلة">
+        <button className={tab === "studios" ? "selected" : ""} onClick={() => setTab("studios")} type="button">المراكز المفضلة</button>
+        <button className={tab === "trainers" ? "selected" : ""} onClick={() => setTab("trainers")} type="button">المدربون المفضلون</button>
+      </div>
+
+      {tab === "studios" ? (
+        favoriteStudios.length > 0 ? <div className="favorite-list">
+          {favoriteStudios.map((studio) => (
+            <article className="favorite-item" key={studio.id}>
+              <button className="favorite-item-main" onClick={() => actions.selectStudio(studio.id)} type="button">
+                <span className="favorite-item-image" style={coverImageStyle(studio.image)} aria-hidden="true" />
+                <span><strong>{studio.name}</strong><small>{studio.area} · {actions.getDistanceLabel(studio)}</small></span>
+              </button>
+              <button className="favorite-heart" aria-label={`إزالة ${studio.name} من المفضلة`} onClick={() => actions.toggleFavorite(studio.id)} type="button"><Heart size={18} fill="currentColor" /></button>
+            </article>
+          ))}
+        </div> : <FavoriteEmptyState label="لا توجد مراكز مفضلة" />
+      ) : trainers.length > 0 ? <div className="favorite-list">
+        {trainers.map((trainer) => (
+          <article className="favorite-item trainer-favorite" key={trainer.name}>
+            <div className="favorite-item-main">
+              <span className="trainer-avatar">{trainer.name.charAt(0)}</span>
+              <span><strong>{trainer.name}</strong><small>{trainer.specialty} · {trainer.studio}</small></span>
+            </div>
+            <button className="favorite-heart" aria-label={`إزالة ${trainer.name} من المفضلة`} onClick={() => actions.toggleFavoriteTrainer(trainer.name)} type="button"><Heart size={18} fill="currentColor" /></button>
+          </article>
+        ))}
+      </div> : <FavoriteEmptyState label="لا يوجد مدربون مفضلون" />}
+    </div>
+  );
+}
+
+function FavoriteEmptyState({ label }: { label: string }) {
+  return (
+    <div className="empty-state favorite-empty">
+      <Heart size={28} aria-hidden="true" />
+      <strong>{label}</strong>
+      <span>اضغط على رمز القلب لحفظ اختياراتك هنا.</span>
+    </div>
+  );
+}
+
+function PaymentMethodsScreen({
+  actions,
+  onGo,
+}: {
+  actions: AuraActions;
+  onGo: (screen: Screen) => void;
+}) {
+  return (
+    <div className="screen-content account-detail-screen">
+      <AccountDetailHeader title="طرق الدفع" subtitle="البطاقات المحفوظة" onBack={() => onGo("account")} />
+      <article className="saved-payment-card">
+        <div className="saved-card-top"><span>VISA</span><ShieldCheck size={19} aria-hidden="true" /></div>
+        <strong dir="ltr">•••• •••• •••• 4821</strong>
+        <div className="saved-card-details">
+          <span><small>اسم حامل البطاقة</small><b>HESSA ALDOWAIGHRI</b></span>
+          <span><small>تاريخ الانتهاء</small><b>08/29</b></span>
+        </div>
+      </article>
+      <div className="payment-method-meta">
+        <span><CreditCard size={18} aria-hidden="true" /><span><strong>بطاقة Visa</strong><small>البطاقة الافتراضية للدفع</small></span></span>
+        <span className="status-pill">افتراضية</span>
+      </div>
+      <button className="secondary-button full" onClick={() => actions.notify("إضافة بطاقة جديدة متاحة في النسخة القادمة")} type="button"><Plus size={18} /> إضافة بطاقة</button>
+    </div>
+  );
+}
+
+function NotificationsScreen({
+  actions,
+  onGo,
+}: {
+  actions: AuraActions;
+  onGo: (screen: Screen) => void;
+}) {
+  return (
+    <div className="screen-content account-detail-screen">
+      <AccountDetailHeader title="الإشعارات" subtitle="التحديثات والتنبيهات" onBack={() => onGo("home")} />
+      <label className="notification-setting">
+        <span><Bell size={19} aria-hidden="true" /><span><strong>استقبال الإشعارات</strong><small>تأكيدات الحجز والتذكير قبل الجلسة</small></span></span>
+        <input checked={actions.notificationsEnabled} onChange={(event) => { actions.setNotificationsEnabled(event.target.checked); actions.notify(event.target.checked ? "تم تفعيل الإشعارات" : "تم إيقاف الإشعارات"); }} type="checkbox" />
+      </label>
+      <div className="notification-list">
+        <article><span className="notification-icon"><TicketCheck size={18} /></span><div><strong>حجزك مؤكد</strong><p>جلسة Pilates Reformer اليوم الساعة 7:00 مساء.</p><small>منذ ساعتين</small></div></article>
+        <article><span className="notification-icon"><Clock3 size={18} /></span><div><strong>تذكير بموعدك</strong><p>نذكرك بالحضور قبل الجلسة بـ 10 دقائق.</p><small>أمس</small></div></article>
+      </div>
+    </div>
+  );
+}
+
+function AccountDetailHeader({
+  onBack,
+  subtitle,
+  title,
+}: {
+  onBack: () => void;
+  subtitle: string;
+  title: string;
+}) {
+  return <AppHeader title={title} subtitle={subtitle} action={<ChevronLeft size={18} />} actionLabel="رجوع" onAction={onBack} />;
+}
+
 function AppHeader({
   title,
   subtitle,
   action,
+  actionLabel,
   onAction,
 }: {
   title: string;
   subtitle: string;
   action?: ReactNode;
+  actionLabel?: string;
   onAction?: () => void;
 }) {
   return (
@@ -3053,8 +3283,8 @@ function AppHeader({
         className="icon-button"
         onClick={onAction}
         type="button"
-        aria-label={title}
-        title={title}
+        aria-label={actionLabel ?? title}
+        title={actionLabel ?? title}
       >
         {action}
       </button> : null}
@@ -3079,12 +3309,13 @@ function BottomNav({
     { id: "bookings", label: "حجوزاتي", icon: <TicketCheck size={18} /> },
     { id: "account", label: "حسابي", icon: <UserRound size={18} /> },
   ];
+  const accountScreens: Screen[] = ["account", "profile", "favorites", "payment-methods"];
 
   return (
     <nav className="bottom-nav" aria-label="التنقل الرئيسي">
       {navItems.map((item) => (
         <button
-          className={current === item.id ? "active" : ""}
+          className={current === item.id || (item.id === "account" && accountScreens.includes(current)) ? "active" : ""}
           key={item.id}
           onClick={() => onGo(item.id)}
           type="button"

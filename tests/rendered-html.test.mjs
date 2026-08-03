@@ -44,6 +44,26 @@ test("routes the two prototype phone numbers to their intended experiences", asy
   assert.match(page, /onStart\("home"\)/);
 });
 
+test("keeps customer settings separate from studio management", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const accountStart = page.indexOf("function AccountScreen");
+  const accountEnd = page.indexOf("function ProfileScreen");
+  const accountScreen = page.slice(accountStart, accountEnd);
+
+  assert.doesNotMatch(accountScreen, /إدارة المركز|الإشعارات|الدعم/);
+  assert.match(accountScreen, /الملف الشخصي/);
+  assert.match(accountScreen, /المفضلة/);
+  assert.match(accountScreen, /طرق الدفع/);
+  assert.match(page, /الاسم الكامل/);
+  assert.match(page, /البريد الإلكتروني/);
+  assert.match(page, /تاريخ الميلاد/);
+  assert.match(page, /المراكز المفضلة/);
+  assert.match(page, /المدربون المفضلون/);
+  assert.match(page, /استقبال الإشعارات/);
+  assert.match(page, /toggleFavoriteTrainer/);
+  assert.match(page, /onExit=\{\(\) => setScreen\("login"\)\}/);
+});
+
 test("keeps a local official source for every visible studio identity", async () => {
   const sourcesUrl = new URL("../public/studios/sources.json", import.meta.url);
   const pageUrl = new URL("../app/page.tsx", import.meta.url);

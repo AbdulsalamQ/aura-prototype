@@ -1119,7 +1119,7 @@ export default function AuraPrototype() {
 
   return (
     <main className="aura-stage" dir="rtl">
-      <section className="desktop-shell" aria-label="تطبيق Aura للكمبيوتر">
+      <section className={`desktop-shell${screen === "login" ? " login-mode" : ""}`} aria-label="تطبيق Aura للكمبيوتر">
         <DesktopExperience
           accepted={accepted}
           activity={activity}
@@ -1136,7 +1136,7 @@ export default function AuraPrototype() {
         />
       </section>
 
-      <section className="app-shell mobile-shell" aria-label="تطبيق Aura للجوال">
+      <section className={`app-shell mobile-shell${screen === "login" ? " login-mode" : ""}`} aria-label="تطبيق Aura للجوال">
         <div className="app-screen">
           {screen === "login" && <LoginScreen onStart={go} />}
           {screen === "home" && <HomeScreen actions={actions} onGo={go} />}
@@ -1181,7 +1181,7 @@ export default function AuraPrototype() {
           {screen === "notifications" && <NotificationsScreen actions={actions} onGo={go} />}
         </div>
 
-        <BottomNav current={screen} onGo={go} />
+        {screen !== "login" ? <BottomNav current={screen} onGo={go} /> : null}
       </section>
       {toast && <div className="toast">{toast}</div>}
     </main>
@@ -1215,13 +1215,20 @@ function DesktopExperience({
   setActivity: (value: string) => void;
   setBookingTab: (value: string) => void;
 }) {
+  if (screen === "login") {
+    return (
+      <main className="desktop-auth-experience">
+        <DesktopLoginScreen onGo={onGo} />
+      </main>
+    );
+  }
+
   return (
     <>
       <DesktopSidebar actions={actions} current={screen} onGo={onGo} />
       <section className="desktop-main">
         <DesktopTopbar onGo={onGo} />
         <div className="desktop-view">
-          {screen === "login" && <DesktopLoginScreen onGo={onGo} />}
           {screen === "home" && <DesktopHomeScreen actions={actions} onGo={onGo} />}
           {screen === "explore" && (
             <DesktopExploreScreen
@@ -1276,6 +1283,18 @@ function DesktopExperience({
   );
 }
 
+function AuraBrandMark({ full = false }: { full?: boolean }) {
+  return (
+    <span
+      aria-label={full ? "Aura" : undefined}
+      aria-hidden={full ? undefined : true}
+      className={full ? "aura-brand-logo full" : "aura-brand-logo mark"}
+      role={full ? "img" : undefined}
+      style={{ backgroundImage: `url("${full ? "brand/aura-logo.webp" : "brand/aura-mark.webp"}")` }}
+    />
+  );
+}
+
 function DesktopSidebar({
   actions,
   current,
@@ -1297,7 +1316,7 @@ function DesktopSidebar({
   return (
     <aside className="desktop-sidebar">
       <button className="desktop-brand" onClick={() => onGo("home")} type="button">
-        <span className="brand-mark">A</span>
+        <AuraBrandMark />
         <span>
           <strong>Aura</strong>
           <small>حجوزات الحركة</small>
@@ -1963,9 +1982,14 @@ function LoginScreen({ onStart }: { onStart: (screen: Screen) => void }) {
     <div className="screen-content login-screen">
       <div className="hero-photo login-photo" aria-hidden="true" />
       <form className="login-card" onSubmit={handleLogin}>
-        <span className="brand-mark large">A</span>
-        <h2>ابدأ مع Aura</h2>
-        <p>احجز جلسات البيلاتس واليوغا من مراكز قريبة، وتابع حجزك من مكان واحد.</p>
+        <div className="login-brand">
+          <AuraBrandMark full />
+          <span>حجوزات الحركة</span>
+        </div>
+        <div className="login-intro">
+          <h2>أهلًا بك في Aura</h2>
+          <p>سجّل دخولك برقم الجوال للوصول إلى حسابك وحجوزاتك.</p>
+        </div>
 
         <label className="field-label" htmlFor={phoneInputId}>
           رقم الجوال
@@ -1981,6 +2005,7 @@ function LoginScreen({ onStart }: { onStart: (screen: Screen) => void }) {
               setLoginError("");
             }}
             placeholder="05X XXX XXXX"
+            required
             value={phone}
           />
         </div>
@@ -1999,6 +2024,7 @@ function LoginScreen({ onStart }: { onStart: (screen: Screen) => void }) {
           <ChevronLeft size={18} aria-hidden="true" />
           متابعة
         </button>
+        <small className="login-security-note">يُستخدم رقمك لتوجيهك تلقائيًا إلى حساب العميل أو حساب المركز.</small>
       </form>
     </div>
   );
@@ -2919,7 +2945,7 @@ function StudioManagementScreen({
     <div className="management-app">
       <header className="management-header">
         <div className="management-brand">
-          <span className="brand-mark">A</span>
+          <AuraBrandMark />
           <div><strong>Aura للمراكز</strong><small>Club Pilates Takhassusi</small></div>
         </div>
         <button className="management-exit" onClick={onExit} type="button">

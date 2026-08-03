@@ -30,9 +30,23 @@ test("server-renders the Aura booking experience", async () => {
 
   const html = await response.text();
   assert.match(html, /<title>Aura \| نموذج حجوزات البيلاتس واليوغا<\/title>/i);
-  assert.match(html, /ابدأ مع Aura/);
+  assert.match(html, /أهلًا بك في Aura/);
   assert.match(html, /رقم الجوال/);
+  assert.doesNotMatch(html, /التنقل الرئيسي|تنقل الكمبيوتر/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview/);
+});
+
+test("uses the approved Aura identity assets", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  await Promise.all([
+    access(new URL("../public/brand/aura-logo.webp", import.meta.url)),
+    access(new URL("../public/brand/aura-mark.webp", import.meta.url)),
+  ]);
+
+  assert.match(page, /brand\/aura-logo\.webp/);
+  assert.match(page, /brand\/aura-mark\.webp/);
+  assert.match(page, /screen !== "login" \? <BottomNav/);
 });
 
 test("routes the two prototype phone numbers to their intended experiences", async () => {

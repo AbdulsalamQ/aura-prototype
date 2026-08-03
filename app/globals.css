@@ -4277,12 +4277,10 @@ input:focus-visible {
   font-size: 17px;
 }
 
-.phone-field-hint {
-  display: block;
-  margin-top: 7px;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
+.login-card .phone-field input:focus,
+.login-card .phone-field input:focus-visible {
+  outline: 0;
+  box-shadow: none;
 }
 
 .login-card .terms-row {

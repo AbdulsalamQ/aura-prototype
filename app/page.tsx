@@ -2029,7 +2029,6 @@ function LoginScreen({ onStart }: { onStart: (screen: Screen) => void }) {
             value={phone}
           />
         </div>
-        <small className="phone-field-hint">10 أرقام، تبدأ بـ 05</small>
         {loginError ? <p className="login-error" role="alert">{loginError}</p> : null}
 
         <label className="terms-row">

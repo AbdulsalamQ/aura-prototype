@@ -15,6 +15,7 @@ import {
   Eye,
   Heart,
   Home,
+  LogOut,
   MapPin,
   Plus,
   Search,
@@ -1284,14 +1285,26 @@ function DesktopExperience({
 }
 
 function AuraBrandMark({ full = false }: { full?: boolean }) {
+  const assetName = full ? "aura-logo" : "aura-mark";
+
   return (
     <span
       aria-label={full ? "Aura" : undefined}
       aria-hidden={full ? undefined : true}
       className={full ? "aura-brand-logo full" : "aura-brand-logo mark"}
       role={full ? "img" : undefined}
-      style={{ backgroundImage: `url("${full ? "brand/aura-logo.webp" : "brand/aura-mark.webp"}")` }}
-    />
+    >
+      <span
+        aria-hidden="true"
+        className="aura-brand-art on-light"
+        style={{ backgroundImage: `url("brand/${assetName}-on-light.png")` }}
+      />
+      <span
+        aria-hidden="true"
+        className="aura-brand-art on-dark"
+        style={{ backgroundImage: `url("brand/${assetName}-on-dark.png")` }}
+      />
+    </span>
   );
 }
 
@@ -1853,6 +1866,10 @@ function DesktopAccountScreen({
               <ChevronLeft size={17} aria-hidden="true" />
             </button>
           ))}
+          <button className="menu-row logout-row" onClick={() => onGo("login")} type="button">
+            <span><LogOut size={18} />تسجيل الخروج</span>
+            <ChevronLeft size={17} aria-hidden="true" />
+          </button>
         </div>
       </section>
     </div>
@@ -1940,19 +1957,15 @@ function DesktopStudioTile({
   );
 }
 
-function normalizeLoginPhone(value: string) {
+function normalizePhoneDigits(value: string) {
   const arabicDigits = "٠١٢٣٤٥٦٧٨٩";
-  let digits = value
+  const easternArabicDigits = "۰۱۲۳۴۵۶۷۸۹";
+
+  return value
     .replace(/[٠-٩]/g, (digit) => String(arabicDigits.indexOf(digit)))
-    .replace(/\D/g, "");
-
-  if (digits.startsWith("966")) {
-    digits = `0${digits.slice(3)}`;
-  } else if (digits.length === 9 && digits.startsWith("5")) {
-    digits = `0${digits}`;
-  }
-
-  return digits;
+    .replace(/[۰-۹]/g, (digit) => String(easternArabicDigits.indexOf(digit)))
+    .replace(/\D/g, "")
+    .slice(0, 10);
 }
 
 function LoginScreen({ onStart }: { onStart: (screen: Screen) => void }) {
@@ -1963,7 +1976,12 @@ function LoginScreen({ onStart }: { onStart: (screen: Screen) => void }) {
 
   function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const normalizedPhone = normalizeLoginPhone(phone);
+    const normalizedPhone = normalizePhoneDigits(phone);
+
+    if (normalizedPhone.length !== 10) {
+      setLoginError("يجب أن يتكون رقم الجوال من 10 أرقام");
+      return;
+    }
 
     if (normalizedPhone === "0500000000") {
       onStart("management");
@@ -1984,7 +2002,7 @@ function LoginScreen({ onStart }: { onStart: (screen: Screen) => void }) {
       <form className="login-card" onSubmit={handleLogin}>
         <div className="login-brand">
           <AuraBrandMark full />
-          <span>حجوزات الحركة</span>
+          <span className="login-brand-caption">حجوزات الحركة</span>
         </div>
         <div className="login-intro">
           <h2>أهلًا بك في Aura</h2>
@@ -2000,15 +2018,18 @@ function LoginScreen({ onStart }: { onStart: (screen: Screen) => void }) {
             id={phoneInputId}
             inputMode="numeric"
             maxLength={10}
+            minLength={10}
             onChange={(event) => {
-              setPhone(event.target.value);
+              setPhone(normalizePhoneDigits(event.target.value));
               setLoginError("");
             }}
+            pattern="[0-9]{10}"
             placeholder="05X XXX XXXX"
             required
             value={phone}
           />
         </div>
+        <small className="phone-field-hint">10 أرقام، تبدأ بـ 05</small>
         {loginError ? <p className="login-error" role="alert">{loginError}</p> : null}
 
         <label className="terms-row">
@@ -2020,7 +2041,7 @@ function LoginScreen({ onStart }: { onStart: (screen: Screen) => void }) {
           <span>أوافق على الشروط وسياسة الخصوصية</span>
         </label>
 
-        <button className="primary-button full" disabled={!acceptedTerms || phone.length < 9} type="submit">
+        <button className="primary-button full" disabled={!acceptedTerms || phone.length !== 10} type="submit">
           <ChevronLeft size={18} aria-hidden="true" />
           متابعة
         </button>
@@ -3057,7 +3078,7 @@ function StudioManagementScreen({
           {panel === "trainer" ? <form className="management-form" onSubmit={addTrainer}>
             <label><span>اسم المدرب</span><input required value={newTrainer.name} onChange={(event) => setNewTrainer({ ...newTrainer, name: event.target.value })} placeholder="الاسم الكامل" /></label>
             <label><span>التخصص</span><input required value={newTrainer.specialty} onChange={(event) => setNewTrainer({ ...newTrainer, specialty: event.target.value })} placeholder="مثال: Reformer Pilates" /></label>
-            <label><span>رقم التواصل</span><input inputMode="tel" value={newTrainer.phone} onChange={(event) => setNewTrainer({ ...newTrainer, phone: event.target.value })} placeholder="05X XXX XXXX" /></label>
+            <label><span>رقم التواصل</span><input inputMode="numeric" maxLength={10} pattern="[0-9]{10}" value={newTrainer.phone} onChange={(event) => setNewTrainer({ ...newTrainer, phone: normalizePhoneDigits(event.target.value) })} placeholder="05X XXX XXXX" /></label>
             <button className="primary-button full" type="submit"><UserPlus size={18} /> إضافة المدرب</button>
           </form> : null}
         </aside>
@@ -3112,6 +3133,13 @@ function AccountScreen({
             <ChevronLeft size={17} aria-hidden="true" />
           </button>
         ))}
+        <button className="menu-row logout-row" onClick={() => onGo("login")} type="button">
+          <span>
+            <LogOut size={18} />
+            تسجيل الخروج
+          </span>
+          <ChevronLeft size={17} aria-hidden="true" />
+        </button>
       </div>
     </div>
   );
@@ -3146,7 +3174,7 @@ function ProfileScreen({
         </label>
         <label>
           <span>رقم الهاتف</span>
-          <input inputMode="numeric" maxLength={10} required value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} />
+          <input inputMode="numeric" maxLength={10} minLength={10} pattern="[0-9]{10}" required value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: normalizePhoneDigits(event.target.value) })} />
         </label>
         <label>
           <span>البريد الإلكتروني</span>

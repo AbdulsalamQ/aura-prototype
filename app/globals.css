@@ -4165,26 +4165,33 @@ input:focus-visible {
 
 /* Authentication is a focused entry point, separate from the signed-in app shell. */
 .aura-brand-logo {
+  position: relative;
   display: block;
   flex: 0 0 auto;
-  background: #102420;
+  background: transparent;
+}
+
+.aura-brand-art {
+  position: absolute;
+  inset: 0;
+  display: block;
   background-position: center;
-  background-size: cover;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.aura-brand-art.on-dark {
+  display: none;
 }
 
 .aura-brand-logo.mark {
   width: 48px;
   height: 48px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  box-shadow: 0 10px 26px rgba(8, 24, 20, 0.18);
 }
 
 .aura-brand-logo.full {
   width: 132px;
   height: 132px;
-  border-radius: 22px;
-  box-shadow: 0 14px 34px rgba(8, 24, 20, 0.16);
 }
 
 .login-mode {
@@ -4222,7 +4229,7 @@ input:focus-visible {
   margin-bottom: 30px;
 }
 
-.login-brand > span {
+.login-brand-caption {
   color: var(--muted);
   font-size: 13px;
   font-weight: 800;
@@ -4268,6 +4275,14 @@ input:focus-visible {
   min-height: 28px;
   color: var(--ink);
   font-size: 17px;
+}
+
+.phone-field-hint {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .login-card .terms-row {
@@ -4353,7 +4368,7 @@ input:focus-visible {
     flex-direction: column;
   }
 
-  .desktop-login-panel .login-brand > span {
+  .desktop-login-panel .login-brand-caption {
     margin-top: -6px;
   }
 }
@@ -4451,6 +4466,14 @@ input:focus-visible {
 }
 
 @media (prefers-color-scheme: dark) {
+  .aura-brand-art.on-light {
+    display: none;
+  }
+
+  .aura-brand-art.on-dark {
+    display: block;
+  }
+
   .desktop-login-panel .login-screen,
   .mobile-shell.login-mode .login-card {
     box-shadow: 0 22px 60px rgba(0, 0, 0, 0.34);
@@ -4463,4 +4486,16 @@ input:focus-visible {
   .login-card .phone-field {
     background: #121a16;
   }
+}
+
+.logout-row {
+  color: var(--clay);
+}
+
+.logout-row:hover {
+  background: color-mix(in srgb, var(--clay) 8%, transparent);
+}
+
+.desktop-account-grid .logout-row {
+  grid-column: 1 / -1;
 }

@@ -40,12 +40,15 @@ test("uses the approved Aura identity assets", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
   await Promise.all([
-    access(new URL("../public/brand/aura-logo.webp", import.meta.url)),
-    access(new URL("../public/brand/aura-mark.webp", import.meta.url)),
+    access(new URL("../public/brand/aura-logo-on-dark.png", import.meta.url)),
+    access(new URL("../public/brand/aura-logo-on-light.png", import.meta.url)),
+    access(new URL("../public/brand/aura-mark-on-dark.png", import.meta.url)),
+    access(new URL("../public/brand/aura-mark-on-light.png", import.meta.url)),
   ]);
 
-  assert.match(page, /brand\/aura-logo\.webp/);
-  assert.match(page, /brand\/aura-mark\.webp/);
+  assert.match(page, /const assetName = full \? "aura-logo" : "aura-mark"/);
+  assert.match(page, /\$\{assetName\}-on-light\.png/);
+  assert.match(page, /\$\{assetName\}-on-dark\.png/);
   assert.match(page, /screen !== "login" \? <BottomNav/);
 });
 
@@ -75,7 +78,21 @@ test("keeps customer settings separate from studio management", async () => {
   assert.match(page, /المدربون المفضلون/);
   assert.match(page, /استقبال الإشعارات/);
   assert.match(page, /toggleFavoriteTrainer/);
+  assert.match(page, /تسجيل الخروج/);
+  assert.match(page, /className="menu-row logout-row"/);
   assert.match(page, /onExit=\{\(\) => setScreen\("login"\)\}/);
+});
+
+test("normalizes phone input and requires exactly ten digits", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /function normalizePhoneDigits/);
+  assert.match(page, /٠١٢٣٤٥٦٧٨٩/);
+  assert.match(page, /۰۱۲۳۴۵۶۷۸۹/);
+  assert.match(page, /\.slice\(0, 10\)/);
+  assert.match(page, /phone\.length !== 10/);
+  assert.match(page, /maxLength=\{10\}/);
+  assert.match(page, /pattern="\[0-9\]\{10\}"/);
 });
 
 test("keeps a local official source for every visible studio identity", async () => {

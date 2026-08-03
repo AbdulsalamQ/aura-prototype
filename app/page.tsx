@@ -31,7 +31,7 @@ import {
   X,
 } from "lucide-react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 type Screen =
   | "login"
@@ -908,7 +908,7 @@ function buildDirectionsUrl(studio: Studio) {
 }
 
 export default function AuraPrototype() {
-  const [screen, setScreen] = useState<Screen>("home");
+  const [screen, setScreen] = useState<Screen>("login");
   const [activity, setActivity] = useState("الكل");
   const [accepted, setAccepted] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -1106,7 +1106,7 @@ export default function AuraPrototype() {
 
       <section className="app-shell mobile-shell" aria-label="تطبيق Aura للجوال">
         <div className="app-screen">
-          {screen === "login" && <LoginScreen onStart={() => go("home")} />}
+          {screen === "login" && <LoginScreen onStart={go} />}
           {screen === "home" && <HomeScreen actions={actions} onGo={go} />}
           {screen === "explore" && (
             <ExploreScreen
@@ -1802,7 +1802,7 @@ function DesktopAccountScreen({ actions }: { actions: AuraActions }) {
 function DesktopLoginScreen({ onGo }: { onGo: (screen: Screen) => void }) {
   return (
     <div className="desktop-login-panel">
-      <LoginScreen onStart={() => onGo("home")} />
+      <LoginScreen onStart={onGo} />
     </div>
   );
 }
@@ -1880,33 +1880,85 @@ function DesktopStudioTile({
   );
 }
 
-function LoginScreen({ onStart }: { onStart: () => void }) {
+function normalizeLoginPhone(value: string) {
+  const arabicDigits = "٠١٢٣٤٥٦٧٨٩";
+  let digits = value
+    .replace(/[٠-٩]/g, (digit) => String(arabicDigits.indexOf(digit)))
+    .replace(/\D/g, "");
+
+  if (digits.startsWith("966")) {
+    digits = `0${digits.slice(3)}`;
+  } else if (digits.length === 9 && digits.startsWith("5")) {
+    digits = `0${digits}`;
+  }
+
+  return digits;
+}
+
+function LoginScreen({ onStart }: { onStart: (screen: Screen) => void }) {
+  const phoneInputId = useId();
+  const [phone, setPhone] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(true);
+  const [loginError, setLoginError] = useState("");
+
+  function handleLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const normalizedPhone = normalizeLoginPhone(phone);
+
+    if (normalizedPhone === "0500000000") {
+      onStart("management");
+      return;
+    }
+
+    if (normalizedPhone === "0511111111") {
+      onStart("home");
+      return;
+    }
+
+    setLoginError("رقم الجوال غير مسجل في Aura");
+  }
+
   return (
     <div className="screen-content login-screen">
       <div className="hero-photo login-photo" aria-hidden="true" />
-      <div className="login-card">
+      <form className="login-card" onSubmit={handleLogin}>
         <span className="brand-mark large">A</span>
         <h2>ابدأ مع Aura</h2>
         <p>احجز جلسات البيلاتس واليوغا من مراكز قريبة، وتابع حجزك من مكان واحد.</p>
 
-        <label className="field-label" htmlFor="phone">
+        <label className="field-label" htmlFor={phoneInputId}>
           رقم الجوال
         </label>
         <div className="phone-field">
-          <span>+966</span>
-          <input id="phone" inputMode="tel" placeholder="5X XXX XXXX" />
+          <input
+            autoComplete="tel"
+            id={phoneInputId}
+            inputMode="numeric"
+            maxLength={10}
+            onChange={(event) => {
+              setPhone(event.target.value);
+              setLoginError("");
+            }}
+            placeholder="05X XXX XXXX"
+            value={phone}
+          />
         </div>
+        {loginError ? <p className="login-error" role="alert">{loginError}</p> : null}
 
         <label className="terms-row">
-          <input type="checkbox" defaultChecked />
+          <input
+            checked={acceptedTerms}
+            onChange={(event) => setAcceptedTerms(event.target.checked)}
+            type="checkbox"
+          />
           <span>أوافق على الشروط وسياسة الخصوصية</span>
         </label>
 
-        <button className="primary-button full" onClick={onStart} type="button">
+        <button className="primary-button full" disabled={!acceptedTerms || phone.length < 9} type="submit">
           <ChevronLeft size={18} aria-hidden="true" />
           متابعة
         </button>
-      </div>
+      </form>
     </div>
   );
 }

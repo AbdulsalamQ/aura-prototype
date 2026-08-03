@@ -1829,6 +1829,13 @@ button {
   margin: 12px 0 0;
 }
 
+.login-error {
+  margin: 8px 2px 0 !important;
+  color: #a34f43 !important;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .success-screen {
   display: grid;
   align-content: center;

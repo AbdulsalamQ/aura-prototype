@@ -30,10 +30,18 @@ test("server-renders the Aura booking experience", async () => {
 
   const html = await response.text();
   assert.match(html, /<title>Aura \| نموذج حجوزات البيلاتس واليوغا<\/title>/i);
-  assert.match(html, /حصة الدويغري/);
-  assert.match(html, /Club Pilates Takhassusi/);
-  assert.match(html, /studios\/club-pilates-cover-v2\.webp/);
+  assert.match(html, /ابدأ مع Aura/);
+  assert.match(html, /رقم الجوال/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview/);
+});
+
+test("routes the two prototype phone numbers to their intended experiences", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /0500000000/);
+  assert.match(page, /0511111111/);
+  assert.match(page, /onStart\("management"\)/);
+  assert.match(page, /onStart\("home"\)/);
 });
 
 test("keeps a local official source for every visible studio identity", async () => {

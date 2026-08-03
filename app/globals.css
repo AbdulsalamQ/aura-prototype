@@ -4164,6 +4164,68 @@ input:focus-visible {
 }
 
 /* Authentication is a focused entry point, separate from the signed-in app shell. */
+.aura-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--paper);
+  animation: aura-splash-out 300ms 1.12s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.aura-splash-brand {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  transform: translateY(-2vh);
+}
+
+.aura-splash-mark,
+.aura-splash-wordmark {
+  position: relative;
+  display: block;
+}
+
+.aura-splash-mark {
+  width: clamp(108px, 18vw, 148px);
+  aspect-ratio: 1;
+  opacity: 0;
+  transform: scale(0.96);
+  animation: aura-splash-mark-in 480ms 80ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.aura-splash-wordmark {
+  width: clamp(168px, 28vw, 218px);
+  aspect-ratio: 694 / 213;
+  opacity: 0;
+  transform: translateY(7px);
+  animation: aura-splash-word-in 400ms 330ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes aura-splash-mark-in {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes aura-splash-word-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes aura-splash-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
 .aura-brand-logo {
   position: relative;
   display: block;
@@ -4483,6 +4545,20 @@ input:focus-visible {
 
   .login-card .phone-field {
     background: #121a16;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aura-splash,
+  .aura-splash-mark,
+  .aura-splash-wordmark {
+    animation: none;
+  }
+
+  .aura-splash-mark,
+  .aura-splash-wordmark {
+    opacity: 1;
+    transform: none;
   }
 }
 

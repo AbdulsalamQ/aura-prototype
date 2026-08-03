@@ -29,7 +29,7 @@ import {
   X,
 } from "lucide-react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 type Screen =
   | "login"
@@ -922,6 +922,7 @@ function buildDirectionsUrl(studio: Studio) {
 }
 
 export default function AuraPrototype() {
+  const [showSplash, setShowSplash] = useState(true);
   const [screen, setScreen] = useState<Screen>("login");
   const [activity, setActivity] = useState("الكل");
   const [accepted, setAccepted] = useState(false);
@@ -954,6 +955,13 @@ export default function AuraPrototype() {
   const selectedSession = getSessionById(selectedSessionId);
   const nearbyStudios = sortStudiosByDistance(studios, userLocation);
   const nearbySessions = sortSessionsByDistance(sessions, userLocation);
+
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timer = window.setTimeout(() => setShowSplash(false), prefersReducedMotion ? 650 : 1450);
+
+    return () => window.clearTimeout(timer);
+  }, []);
 
   function go(nextScreen: Screen) {
     setProcessing(false);
@@ -1120,6 +1128,7 @@ export default function AuraPrototype() {
 
   return (
     <main className="aura-stage" dir="rtl">
+      {showSplash ? <SplashScreen /> : null}
       <section className={`desktop-shell${screen === "login" ? " login-mode" : ""}`} aria-label="تطبيق Aura للكمبيوتر">
         <DesktopExperience
           accepted={accepted}
@@ -1284,15 +1293,21 @@ function DesktopExperience({
   );
 }
 
-function AuraBrandMark({ full = false }: { full?: boolean }) {
-  const assetName = full ? "aura-logo" : "aura-mark";
-
+function AuraThemedAsset({
+  assetName,
+  className,
+  label,
+}: {
+  assetName: string;
+  className: string;
+  label?: string;
+}) {
   return (
     <span
-      aria-label={full ? "Aura" : undefined}
-      aria-hidden={full ? undefined : true}
-      className={full ? "aura-brand-logo full" : "aura-brand-logo mark"}
-      role={full ? "img" : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
+      className={className}
+      role={label ? "img" : undefined}
     >
       <span
         aria-hidden="true"
@@ -1305,6 +1320,29 @@ function AuraBrandMark({ full = false }: { full?: boolean }) {
         style={{ backgroundImage: `url("brand/${assetName}-on-dark.png")` }}
       />
     </span>
+  );
+}
+
+function AuraBrandMark({ full = false }: { full?: boolean }) {
+  const assetName = full ? "aura-logo" : "aura-mark";
+
+  return (
+    <AuraThemedAsset
+      assetName={assetName}
+      className={full ? "aura-brand-logo full" : "aura-brand-logo mark"}
+      label={full ? "Aura" : undefined}
+    />
+  );
+}
+
+function SplashScreen() {
+  return (
+    <div className="aura-splash" role="status" aria-label="تشغيل Aura">
+      <div className="aura-splash-brand" aria-hidden="true">
+        <AuraThemedAsset assetName="aura-mark" className="aura-splash-mark" />
+        <AuraThemedAsset assetName="aura-wordmark" className="aura-splash-wordmark" />
+      </div>
+    </div>
   );
 }
 

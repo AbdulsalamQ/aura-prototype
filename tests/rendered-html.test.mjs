@@ -32,6 +32,7 @@ test("server-renders the Aura booking experience", async () => {
   assert.match(html, /<title>Aura \| نموذج حجوزات البيلاتس واليوغا<\/title>/i);
   assert.match(html, /أهلًا بك في Aura/);
   assert.match(html, /رقم الجوال/);
+  assert.match(html, /تشغيل Aura/);
   assert.doesNotMatch(html, /التنقل الرئيسي|تنقل الكمبيوتر/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview/);
 });
@@ -44,11 +45,16 @@ test("uses the approved Aura identity assets", async () => {
     access(new URL("../public/brand/aura-logo-on-light.png", import.meta.url)),
     access(new URL("../public/brand/aura-mark-on-dark.png", import.meta.url)),
     access(new URL("../public/brand/aura-mark-on-light.png", import.meta.url)),
+    access(new URL("../public/brand/aura-wordmark-on-dark.png", import.meta.url)),
+    access(new URL("../public/brand/aura-wordmark-on-light.png", import.meta.url)),
   ]);
 
   assert.match(page, /const assetName = full \? "aura-logo" : "aura-mark"/);
   assert.match(page, /\$\{assetName\}-on-light\.png/);
   assert.match(page, /\$\{assetName\}-on-dark\.png/);
+  assert.match(page, /function SplashScreen/);
+  assert.match(page, /prefers-reduced-motion: reduce/);
+  assert.match(page, /setShowSplash\(false\)/);
   assert.match(page, /screen !== "login" \? <BottomNav/);
 });
 

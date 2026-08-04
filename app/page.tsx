@@ -1,5 +1,8 @@
 "use client";
 
+/* Local WebP assets use native lazy loading in both the Vite and Next builds. */
+/* eslint-disable @next/next/no-img-element */
+
 import {
   Bell,
   CalendarPlus,
@@ -7,6 +10,7 @@ import {
   Check,
   CheckCircle2,
   ChevronLeft,
+  ChevronRight,
   CircleUserRound,
   Clock3,
   CreditCard,
@@ -29,7 +33,8 @@ import {
   X,
 } from "lucide-react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 
 type Screen =
   | "login"
@@ -98,13 +103,46 @@ type Session = {
   description: string;
 };
 
-type BookingStatus = "confirmed" | "cancelled";
+type BookingStatus = "confirmed" | "cancelled" | "completed" | "no-show";
 
 type BookingRecord = {
   id: string;
   sessionId: string;
   status: BookingStatus;
   createdAt: string;
+  dateISO: string;
+  dateLabel: string;
+  weekday: string;
+  time: string;
+  time24: string;
+  total: number;
+  paymentMethod: string;
+  trainer: string;
+};
+
+type BookingDraft = {
+  sessionId: string;
+  dateISO: string;
+  dateLabel: string;
+  weekday: string;
+  time: string;
+  time24: string;
+  trainer: string;
+};
+
+type ScheduleDay = {
+  weekday: string;
+  date: string;
+  month: string;
+  iso: string;
+  label: string;
+};
+
+type TimeSlot = {
+  value: string;
+  time24: string;
+  status: "available" | "booked";
+  trainer: string;
 };
 
 type UserProfile = {
@@ -124,6 +162,8 @@ type ManagedBooking = {
   className: string;
   date: string;
   time: string;
+  dateISO?: string;
+  time24?: string;
   trainer: string;
   payment: "مدفوع" | "غير مدفوع";
   status: ManagedBookingStatus;
@@ -132,8 +172,8 @@ type ManagedBooking = {
 type ManagedClass = {
   id: string;
   title: string;
-  date: string;
-  time: string;
+  dateISO: string;
+  time24: string;
   duration: string;
   trainer: string;
   capacity: number;
@@ -154,7 +194,11 @@ type AuraActions = {
   userProfile: UserProfile;
   favoriteStudioIds: string[];
   favoriteTrainerNames: string[];
-  booking: BookingRecord | null;
+  bookings: BookingRecord[];
+  selectedBooking: BookingRecord | null;
+  bookingDraft: BookingDraft;
+  managedClasses: ManagedClass[];
+  setActivity: (value: string) => void;
   paymentMethod: string;
   notificationsEnabled: boolean;
   userLocation: GeoPoint | null;
@@ -164,13 +208,15 @@ type AuraActions = {
   selectStudio: (studioId: string) => void;
   selectSession: (sessionId: string) => void;
   startBooking: (sessionId?: string) => void;
+  updateBookingDraft: (draft: BookingDraft) => void;
+  viewBooking: (bookingId: string) => void;
   toggleFavorite: (studioId: string) => void;
   toggleFavoriteTrainer: (trainerName: string) => void;
   addToCalendar: () => void;
   openDirections: (studio: Studio) => void;
   requestUserLocation: () => void;
   getDistanceLabel: (studio: Studio) => string;
-  cancelBooking: () => void;
+  cancelBooking: (bookingId: string) => void;
   notify: (message: string) => void;
   setUserProfile: (profile: UserProfile) => void;
   setNotificationsEnabled: (value: boolean) => void;
@@ -689,6 +735,40 @@ const sessions: Session[] = [
       "جلسة Reformer تركّز على القوة، الاتزان، والتنفس بإيقاع مريح وعدد مقاعد محدود.",
   },
   {
+    id: "club-pilates-mat",
+    studioId: "club-pilates-takhassusi",
+    title: "Mat Pilates",
+    studio: "Club Pilates Takhassusi",
+    area: "التخصصي",
+    time: "5:30 مساء",
+    date: "اليوم",
+    price: 95,
+    seats: 3,
+    level: "مبتدئ",
+    trainer: "سارة",
+    image: "studios/club-pilates-cover-v2.webp",
+    duration: "45 دقيقة",
+    category: "بيلاتس",
+    description: "جلسة بيلاتس أرضية تركّز على التحكم والثبات، ومناسبة للمبتدئين.",
+  },
+  {
+    id: "club-pilates-core",
+    studioId: "club-pilates-takhassusi",
+    title: "Core Strength",
+    studio: "Club Pilates Takhassusi",
+    area: "التخصصي",
+    time: "6:30 مساء",
+    date: "غدًا",
+    price: 105,
+    seats: 5,
+    level: "متوسط",
+    trainer: "نواف",
+    image: "studios/club-pilates-cover-v2.webp",
+    duration: "45 دقيقة",
+    category: "بيلاتس",
+    description: "تمارين مركزة للقوة والثبات مع انتقالات واضحة ومستوى متوسط.",
+  },
+  {
     id: "pure-yoga-vinyasa",
     studioId: "pure-yoga",
     title: "Vinyasa Yoga",
@@ -762,36 +842,7 @@ const sessions: Session[] = [
   },
 ];
 
-function buildCandidateSession(studio: Studio): Session {
-  const isYoga = studio.tags.includes("يوغا");
-  const category = isYoga ? "يوغا" : "بيلاتس";
-
-  return {
-    id: `${studio.id}-intro`,
-    studioId: studio.id,
-    title: isYoga ? "Yoga Intro Session" : "Pilates Intro Session",
-    studio: studio.name,
-    area: studio.area,
-    time: "7:00 مساء",
-    date: "اليوم",
-    price: 100,
-    seats: 6,
-    level: "مناسب للجميع",
-    trainer: "فريق المركز",
-    image: studio.image,
-    duration: "50 دقيقة",
-    category,
-    description:
-      "جلسة تعريفية تساعدك على تجربة أسلوب المركز والتعرف على المدرب قبل اختيار الجلسات المنتظمة.",
-  };
-}
-
-const allSessions: Session[] = [
-  ...sessions,
-  ...studios
-    .filter((studio) => !sessions.some((session) => session.studioId === studio.id))
-    .map(buildCandidateSession),
-];
+const allSessions: Session[] = sessions;
 
 function getStudioById(studioId: string) {
   return studios.find((studio) => studio.id === studioId) ?? studios[0];
@@ -808,7 +859,10 @@ function getPublicStudioTags(studio: Studio) {
     .map((tag) => tag.trim())
     .filter((tag) => tag && !hiddenTerms.includes(tag));
 
-  return tags.slice(0, 3).join("، ") || "جلسات حركة ولياقة";
+  const eligibilityTags = tags.filter((tag) => tag.includes("للسيدات") || tag.includes("للرجال"));
+  const activityTags = tags.filter((tag) => !eligibilityTags.includes(tag));
+
+  return [...eligibilityTags, ...activityTags].slice(0, 3).join("، ") || "جلسات حركة ولياقة";
 }
 
 function getPublicStudioFacilities(studio: Studio) {
@@ -844,7 +898,7 @@ function matchesStudioSearch(studio: Studio, query: string) {
 }
 
 function getStudioPoint(studio: Studio) {
-  return studioCoordinates[studio.id] ?? { lat: 24.7136, lng: 46.6753 };
+  return studioCoordinates[studio.id] ?? null;
 }
 
 function getDistanceKm(from: GeoPoint, to: GeoPoint) {
@@ -869,9 +923,13 @@ function sortStudiosByDistance(sourceStudios: Studio[], userLocation: GeoPoint |
   }
 
   return [...sourceStudios].sort(
-    (first, second) =>
-      getDistanceKm(userLocation, getStudioPoint(first)) -
-      getDistanceKm(userLocation, getStudioPoint(second)),
+    (first, second) => {
+      const firstPoint = getStudioPoint(first);
+      const secondPoint = getStudioPoint(second);
+      if (!firstPoint) return 1;
+      if (!secondPoint) return -1;
+      return getDistanceKm(userLocation, firstPoint) - getDistanceKm(userLocation, secondPoint);
+    },
   );
 }
 
@@ -884,10 +942,11 @@ function sortSessionsByDistance(sourceSessions: Session[], userLocation: GeoPoin
     const firstStudio = getStudioById(first.studioId);
     const secondStudio = getStudioById(second.studioId);
 
-    return (
-      getDistanceKm(userLocation, getStudioPoint(firstStudio)) -
-      getDistanceKm(userLocation, getStudioPoint(secondStudio))
-    );
+    const firstPoint = getStudioPoint(firstStudio);
+    const secondPoint = getStudioPoint(secondStudio);
+    if (!firstPoint) return 1;
+    if (!secondPoint) return -1;
+    return getDistanceKm(userLocation, firstPoint) - getDistanceKm(userLocation, secondPoint);
   });
 }
 
@@ -896,7 +955,9 @@ function formatDistanceFromUser(studio: Studio, userLocation: GeoPoint | null) {
     return studio.distance;
   }
 
-  const distance = getDistanceKm(userLocation, getStudioPoint(studio));
+  const point = getStudioPoint(studio);
+  if (!point) return studio.distance;
+  const distance = getDistanceKm(userLocation, point);
 
   if (distance < 1) {
     return `${Math.round(distance * 1000)} م عنك`;
@@ -905,18 +966,119 @@ function formatDistanceFromUser(studio: Studio, userLocation: GeoPoint | null) {
   return `${distance.toFixed(1)} كم عنك`;
 }
 
-function buildCalendarUrl(session: Session, studio: Studio) {
+function addDaysISO(offset: number) {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + offset);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function formatDateLabel(dateISO: string) {
+  const date = new Date(`${dateISO}T12:00:00`);
+  return new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
+    day: "numeric",
+    month: "long",
+  }).format(date);
+}
+
+function formatWeekday(dateISO: string) {
+  return new Intl.DateTimeFormat("ar-SA-u-ca-gregory", { weekday: "long" }).format(
+    new Date(`${dateISO}T12:00:00`),
+  );
+}
+
+function formatTimeLabel(time24: string) {
+  const [hoursText, minutes] = time24.split(":");
+  const hours = Number(hoursText);
+  const suffix = hours >= 12 ? "م" : "ص";
+  const displayHours = hours % 12 || 12;
+  return `${String(displayHours).padStart(2, "0")}:${minutes} ${suffix}`;
+}
+
+function getDurationMinutes(duration: string) {
+  return Number(duration.match(/\d+/)?.[0] ?? 60);
+}
+
+function getInitialDraft(sessionId = "club-pilates-reformer"): BookingDraft {
+  const dateISO = addDaysISO(0);
+  return {
+    sessionId,
+    dateISO,
+    dateLabel: formatDateLabel(dateISO),
+    weekday: formatWeekday(dateISO),
+    time: "04:00 م",
+    time24: "16:00",
+    trainer: sessionId === "club-pilates-reformer" ? "ليان السالم" : getSessionById(sessionId).trainer,
+  };
+}
+
+function getInitialBooking(): BookingRecord {
+  const draft = getInitialDraft();
+  const session = getSessionById(draft.sessionId);
+  return {
+    id: "AUR-2481",
+    ...draft,
+    status: "confirmed",
+    createdAt: new Date().toISOString(),
+    total: session.price + Math.round(session.price * 0.15),
+    paymentMethod: "Apple Pay",
+  };
+}
+
+function getTimeSlots(
+  session: Session,
+  dateISO: string,
+  managedClasses: ManagedClass[],
+): TimeSlot[] {
+  if (session.studioId === "club-pilates-takhassusi") {
+    return managedClasses
+      .filter((item) => item.title === session.title && item.dateISO === dateISO)
+      .sort((first, second) => first.time24.localeCompare(second.time24))
+      .map((item) => ({
+        value: formatTimeLabel(item.time24),
+        time24: item.time24,
+        status: item.booked >= item.capacity ? "booked" : "available",
+        trainer: item.trainer,
+      }));
+  }
+
+  const sessionTimes: Record<string, string[][]> = {
+    "pure-yoga-vinyasa": [["17:00", "18:30", "20:00"], ["16:30", "18:00", "20:30"]],
+    "the-pilates-studio-mat": [["06:15", "09:00", "17:30"], ["07:00", "10:30", "18:00"]],
+    "reform-athletica-core": [["17:45", "19:00", "20:15"], ["16:30", "18:30", "20:30"]],
+    "evolve-slow": [["18:00", "19:30", "21:00"], ["17:30", "19:00", "20:30"]],
+  };
+  const choices = sessionTimes[session.id] ?? [["16:00", "18:00", "20:00"]];
+  const dayIndex = Math.abs(Number(dateISO.replaceAll("-", ""))) % choices.length;
+
+  return choices[dayIndex].map((time24, index) => ({
+    value: formatTimeLabel(time24),
+    time24,
+    status: index === (dayIndex + 1) % choices[dayIndex].length ? "booked" : "available",
+    trainer: session.trainer,
+  }));
+}
+
+function buildCalendarUrl(booking: BookingRecord, session: Session, studio: Studio) {
   const text = encodeURIComponent(`${session.title} - Aura`);
   const location = encodeURIComponent(studio.address);
   const details = encodeURIComponent(
-    `${studio.name} | ${session.trainer} | ${session.duration}`,
+    `${studio.name} | ${booking.trainer} | ${session.duration} | رقم الحجز ${booking.id}`,
   );
+  const start = new Date(`${booking.dateISO}T${booking.time24}:00+03:00`);
+  const end = new Date(start.getTime() + getDurationMinutes(session.duration) * 60_000);
+  const formatCalendarDate = (date: Date) =>
+    date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const dates = `${formatCalendarDate(start)}/${formatCalendarDate(end)}`;
 
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&location=${location}&details=${details}`;
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${dates}&ctz=Asia%2FRiyadh&location=${location}&details=${details}`;
 }
 
 function buildDirectionsUrl(studio: Studio) {
-  const destination = encodeURIComponent(studio.mapQuery || `${studio.name} ${studio.address}`);
+  const point = studioCoordinates[studio.id];
+  const destination = encodeURIComponent(
+    point ? `${point.lat},${point.lng}` : studio.mapQuery || `${studio.name} ${studio.address}`,
+  );
 
   return `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
 }
@@ -944,15 +1106,17 @@ export default function AuraPrototype() {
   const [paymentMethod, setPaymentMethod] = useState("Apple Pay");
   const [userLocation, setUserLocation] = useState<GeoPoint | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("idle");
-  const [booking, setBooking] = useState<BookingRecord | null>({
-    id: "AUR-2481",
-    sessionId: "club-pilates-reformer",
-    status: "confirmed",
-    createdAt: "2026-08-01T19:00:00+03:00",
-  });
+  const [bookingDraft, setBookingDraft] = useState<BookingDraft>(() => getInitialDraft());
+  const [bookings, setBookings] = useState<BookingRecord[]>(() => [getInitialBooking()]);
+  const [selectedBookingId, setSelectedBookingId] = useState("AUR-2481");
+  const [managedBookings, setManagedBookings] = useState<ManagedBooking[]>(initialManagedBookings);
+  const [managedClasses, setManagedClasses] = useState<ManagedClass[]>(initialManagedClasses);
+  const [managedTrainers, setManagedTrainers] = useState<ManagedTrainer[]>(initialManagedTrainers);
+  const [hasHydrated, setHasHydrated] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const selectedStudio = getStudioById(selectedStudioId);
   const selectedSession = getSessionById(selectedSessionId);
+  const selectedBooking = bookings.find((item) => item.id === selectedBookingId) ?? null;
   const nearbyStudios = sortStudiosByDistance(studios, userLocation);
   const nearbySessions = sortSessionsByDistance(sessions, userLocation);
 
@@ -962,6 +1126,79 @@ export default function AuraPrototype() {
 
     return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    let state: {
+      bookings?: BookingRecord[];
+      favoriteStudioIds?: string[];
+      favoriteTrainerNames?: string[];
+      managedBookings?: ManagedBooking[];
+      managedClasses?: ManagedClass[];
+      managedTrainers?: ManagedTrainer[];
+      notificationsEnabled?: boolean;
+      paymentMethod?: string;
+      userProfile?: UserProfile;
+    } = {};
+    try {
+      const stored = window.localStorage.getItem("aura-prototype-state-v2");
+      if (stored) state = JSON.parse(stored) as typeof state;
+    } catch {
+      window.localStorage.removeItem("aura-prototype-state-v2");
+    }
+
+    const timer = window.setTimeout(() => {
+      if (Object.keys(state).length) {
+        if (state.bookings?.length) setBookings(state.bookings);
+        if (state.favoriteStudioIds) setFavoriteStudioIds(state.favoriteStudioIds);
+        if (state.favoriteTrainerNames) setFavoriteTrainerNames(state.favoriteTrainerNames);
+        if (state.managedBookings) setManagedBookings(state.managedBookings);
+        if (state.managedClasses) setManagedClasses(state.managedClasses);
+        if (state.managedTrainers) setManagedTrainers(state.managedTrainers);
+        if (typeof state.notificationsEnabled === "boolean") setNotificationsEnabled(state.notificationsEnabled);
+        if (state.paymentMethod) setPaymentMethod(state.paymentMethod);
+        if (state.userProfile) setUserProfile(state.userProfile);
+      }
+      setHasHydrated(true);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydrated) return;
+    window.localStorage.setItem(
+      "aura-prototype-state-v2",
+      JSON.stringify({
+        bookings,
+        favoriteStudioIds,
+        favoriteTrainerNames,
+        managedBookings,
+        managedClasses,
+        managedTrainers,
+        notificationsEnabled,
+        paymentMethod,
+        userProfile,
+      }),
+    );
+  }, [
+    bookings,
+    favoriteStudioIds,
+    favoriteTrainerNames,
+    hasHydrated,
+    managedBookings,
+    managedClasses,
+    managedTrainers,
+    notificationsEnabled,
+    paymentMethod,
+    userProfile,
+  ]);
+
+  useEffect(() => {
+    document.querySelectorAll<HTMLElement>(".app-screen, .desktop-view").forEach((container) => {
+      container.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    });
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [screen]);
 
   function go(nextScreen: Screen) {
     setProcessing(false);
@@ -974,9 +1211,9 @@ export default function AuraPrototype() {
   }
 
   function selectStudio(studioId: string) {
-    const nextSession = allSessions.find((session) => session.studioId === studioId) ?? allSessions[0];
+    const nextSession = allSessions.find((session) => session.studioId === studioId);
     setSelectedStudioId(studioId);
-    setSelectedSessionId(nextSession.id);
+    if (nextSession) setSelectedSessionId(nextSession.id);
     setScreen("studio");
   }
 
@@ -988,11 +1225,37 @@ export default function AuraPrototype() {
   }
 
   function startBooking(sessionId = selectedSessionId) {
-    const nextSession = getSessionById(sessionId);
+    const nextSession = allSessions.find((session) => session.id === sessionId);
+    if (!nextSession) {
+      notify("لا توجد مواعيد مؤكدة لهذا المركز حاليًا");
+      return;
+    }
+    const draft = getInitialDraft(nextSession.id);
+    const firstAvailable = getTimeSlots(nextSession, draft.dateISO, managedClasses)
+      .find((slot) => slot.status === "available");
     setSelectedStudioId(nextSession.studioId);
     setSelectedSessionId(nextSession.id);
+    setBookingDraft({
+      ...draft,
+      time: firstAvailable?.value ?? "",
+      time24: firstAvailable?.time24 ?? "",
+      trainer: firstAvailable?.trainer ?? nextSession.trainer,
+    });
     setAccepted(false);
     setScreen("schedule");
+  }
+
+  function updateBookingDraft(draft: BookingDraft) {
+    setBookingDraft(draft);
+  }
+
+  function viewBooking(bookingId: string) {
+    const nextBooking = bookings.find((item) => item.id === bookingId);
+    if (!nextBooking) return;
+    setSelectedBookingId(bookingId);
+    setSelectedSessionId(nextBooking.sessionId);
+    setSelectedStudioId(getSessionById(nextBooking.sessionId).studioId);
+    setScreen("success");
   }
 
   function toggleFavorite(studioId: string) {
@@ -1014,8 +1277,14 @@ export default function AuraPrototype() {
   }
 
   function addToCalendar() {
+    const booking = selectedBooking ?? bookings.find((item) => item.status === "confirmed");
+    if (!booking) {
+      notify("لا يوجد حجز مؤكد لإضافته إلى التقويم");
+      return;
+    }
+    const bookingSession = getSessionById(booking.sessionId);
     window.open(
-      buildCalendarUrl(selectedSession, getStudioById(selectedSession.studioId)),
+      buildCalendarUrl(booking, bookingSession, getStudioById(bookingSession.studioId)),
       "_blank",
       "noopener,noreferrer",
     );
@@ -1059,26 +1328,69 @@ export default function AuraPrototype() {
     return formatDistanceFromUser(studio, userLocation);
   }
 
-  function cancelBooking() {
-    setBooking((current) => ({
-      id: current?.id ?? "AUR-2481",
-      sessionId: current?.sessionId ?? selectedSession.id,
-      status: "cancelled",
-      createdAt: current?.createdAt ?? new Date().toISOString(),
-    }));
+  function cancelBooking(bookingId: string) {
+    const booking = bookings.find((item) => item.id === bookingId);
+    if (!booking || booking.status === "cancelled") return;
+    setBookings((current) => current.map((item) => item.id === bookingId ? { ...item, status: "cancelled" } : item));
+    setManagedBookings((current) => current.map((item) => item.id === bookingId ? { ...item, status: "ملغي" } : item));
+    setManagedClasses((current) => current.map((item) =>
+      item.title === getSessionById(booking.sessionId).title &&
+      item.dateISO === booking.dateISO &&
+      item.time24 === booking.time24
+        ? { ...item, booked: Math.max(0, item.booked - 1) }
+        : item,
+    ));
     setBookingTab("السابقة");
-    notify("تم إلغاء الحجز في البروتوتايب");
+    notify("تم إلغاء الحجز وإعادة المقعد للتوفر");
   }
 
   function payNow() {
+    const duplicate = bookings.some((booking) =>
+      booking.status === "confirmed" &&
+      booking.sessionId === bookingDraft.sessionId &&
+      booking.dateISO === bookingDraft.dateISO &&
+      booking.time24 === bookingDraft.time24,
+    );
+    if (duplicate) {
+      notify("لديك حجز مؤكد في هذا الموعد بالفعل");
+      return;
+    }
     setProcessing(true);
     window.setTimeout(() => {
-      setBooking({
-        id: "AUR-2481",
-        sessionId: selectedSessionId,
+      const bookingId = `AUR-${String(Date.now()).slice(-6)}`;
+      const total = selectedSession.price + Math.round(selectedSession.price * 0.15);
+      const bookingRecord: BookingRecord = {
+        id: bookingId,
+        ...bookingDraft,
         status: "confirmed",
         createdAt: new Date().toISOString(),
-      });
+        total,
+        paymentMethod,
+      };
+      setBookings((current) => [bookingRecord, ...current]);
+      setSelectedBookingId(bookingId);
+      if (selectedSession.studioId === "club-pilates-takhassusi") {
+        setManagedBookings((current) => [{
+          id: bookingId,
+          customer: userProfile.fullName,
+          phone: userProfile.phone,
+          className: selectedSession.title,
+          date: `${bookingDraft.weekday}، ${bookingDraft.dateLabel}`,
+          time: bookingDraft.time,
+          dateISO: bookingDraft.dateISO,
+          time24: bookingDraft.time24,
+          trainer: bookingDraft.trainer,
+          payment: "مدفوع",
+          status: "مؤكد",
+        }, ...current]);
+        setManagedClasses((current) => current.map((item) =>
+          item.title === selectedSession.title &&
+          item.dateISO === bookingDraft.dateISO &&
+          item.time24 === bookingDraft.time24
+            ? { ...item, booked: Math.min(item.capacity, item.booked + 1) }
+            : item,
+        ));
+      }
       setProcessing(false);
       setScreen("success");
       notify("تم تأكيد الحجز");
@@ -1091,7 +1403,11 @@ export default function AuraPrototype() {
     userProfile,
     favoriteStudioIds,
     favoriteTrainerNames,
-    booking,
+    bookings,
+    selectedBooking,
+    bookingDraft,
+    managedClasses,
+    setActivity,
     paymentMethod,
     notificationsEnabled,
     userLocation,
@@ -1101,6 +1417,8 @@ export default function AuraPrototype() {
     selectStudio,
     selectSession,
     startBooking,
+    updateBookingDraft,
+    viewBooking,
     toggleFavorite,
     toggleFavoriteTrainer,
     addToCalendar,
@@ -1118,10 +1436,18 @@ export default function AuraPrototype() {
     return (
       <main className="management-stage" dir="rtl">
         <StudioManagementScreen
+          bookings={managedBookings}
+          classes={managedClasses}
+          customerBookings={bookings}
+          trainers={managedTrainers}
           notify={notify}
           onExit={() => setScreen("login")}
+          setBookings={setManagedBookings}
+          setClasses={setManagedClasses}
+          setCustomerBookings={setBookings}
+          setTrainers={setManagedTrainers}
         />
-        {toast && <div className="toast">{toast}</div>}
+        {toast && <div className="toast" role="status" aria-live="polite">{toast}</div>}
       </main>
     );
   }
@@ -1148,7 +1474,7 @@ export default function AuraPrototype() {
 
       <section className={`app-shell mobile-shell${screen === "login" ? " login-mode" : ""}`} aria-label="تطبيق Aura للجوال">
         <div className="app-screen">
-          {screen === "login" && <LoginScreen onStart={go} />}
+          {screen === "login" && <LoginScreen customerPhone={userProfile.phone} onStart={go} />}
           {screen === "home" && <HomeScreen actions={actions} onGo={go} />}
           {screen === "explore" && (
             <ExploreScreen
@@ -1165,16 +1491,17 @@ export default function AuraPrototype() {
           {screen === "checkout" && (
             <CheckoutScreen
               accepted={accepted}
+              bookingDraft={bookingDraft}
               setAccepted={setAccepted}
               session={selectedSession}
               onGo={go}
             />
           )}
           {screen === "payment" && (
-            <PaymentScreen actions={actions} processing={processing} payNow={payNow} />
+            <PaymentScreen actions={actions} processing={processing} payNow={payNow} onGo={go} />
           )}
           {screen === "success" && (
-            <SuccessScreen actions={actions} session={selectedSession} onGo={go} />
+            <SuccessScreen actions={actions} onGo={go} />
           )}
           {screen === "bookings" && (
             <BookingsScreen
@@ -1191,9 +1518,11 @@ export default function AuraPrototype() {
           {screen === "notifications" && <NotificationsScreen actions={actions} onGo={go} />}
         </div>
 
-        {screen !== "login" ? <BottomNav current={screen} onGo={go} /> : null}
+        {["home", "explore", "studio", "bookings", "account", "profile", "favorites", "payment-methods", "notifications"].includes(screen)
+          ? <BottomNav current={screen} onGo={go} />
+          : null}
       </section>
-      {toast && <div className="toast">{toast}</div>}
+      {toast && <div className="toast" role="status" aria-live="polite">{toast}</div>}
     </main>
   );
 }
@@ -1228,7 +1557,7 @@ function DesktopExperience({
   if (screen === "login") {
     return (
       <main className="desktop-auth-experience">
-        <DesktopLoginScreen onGo={onGo} />
+        <DesktopLoginScreen customerPhone={actions.userProfile.phone} onGo={onGo} />
       </main>
     );
   }
@@ -1237,7 +1566,7 @@ function DesktopExperience({
     <>
       <DesktopSidebar actions={actions} current={screen} onGo={onGo} />
       <section className="desktop-main">
-        <DesktopTopbar onGo={onGo} />
+        <DesktopTopbar actions={actions} onGo={onGo} />
         <div className="desktop-view">
           {screen === "home" && <DesktopHomeScreen actions={actions} onGo={onGo} />}
           {screen === "explore" && (
@@ -1258,6 +1587,7 @@ function DesktopExperience({
             <DesktopSurface>
               <CheckoutScreen
                 accepted={accepted}
+                bookingDraft={actions.bookingDraft}
                 setAccepted={setAccepted}
                 session={selectedSession}
                 onGo={onGo}
@@ -1266,12 +1596,12 @@ function DesktopExperience({
           )}
           {screen === "payment" && (
             <DesktopSurface narrow>
-              <PaymentScreen actions={actions} processing={processing} payNow={payNow} />
+              <PaymentScreen actions={actions} processing={processing} payNow={payNow} onGo={onGo} />
             </DesktopSurface>
           )}
           {screen === "success" && (
             <DesktopSurface narrow>
-              <SuccessScreen actions={actions} session={selectedSession} onGo={onGo} />
+              <SuccessScreen actions={actions} onGo={onGo} />
             </DesktopSurface>
           )}
           {screen === "bookings" && (
@@ -1279,7 +1609,6 @@ function DesktopExperience({
               actions={actions}
               bookingTab={bookingTab}
               setBookingTab={setBookingTab}
-              onGo={onGo}
             />
           )}
           {screen === "account" && <DesktopAccountScreen actions={actions} onGo={onGo} />}
@@ -1355,7 +1684,8 @@ function DesktopSidebar({
   current: Screen;
   onGo: (screen: Screen) => void;
 }) {
-  const sidebarSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
+  const sidebarBooking = actions.bookings.find((booking) => booking.status === "confirmed");
+  const sidebarSession = sidebarBooking ? getSessionById(sidebarBooking.sessionId) : null;
   const navItems: Array<{ id: Screen; label: string; icon: ReactNode }> = [
     { id: "home", label: "الرئيسية", icon: <Home size={18} /> },
     { id: "explore", label: "استكشاف", icon: <Search size={18} /> },
@@ -1378,6 +1708,7 @@ function DesktopSidebar({
         {navItems.map((item) => (
           <button
             className={current === item.id || (item.id === "account" && accountScreens.includes(current)) ? "active" : ""}
+            aria-current={current === item.id || (item.id === "account" && accountScreens.includes(current)) ? "page" : undefined}
             key={item.id}
             onClick={() => onGo(item.id)}
             type="button"
@@ -1389,11 +1720,11 @@ function DesktopSidebar({
       </nav>
 
       <div className="desktop-sidebar-card">
-        <span>حجزك القادم</span>
-        <strong>{sidebarSession.title}</strong>
-        <small>{sidebarSession.date} - {sidebarSession.time}</small>
-        <button onClick={() => onGo("success")} type="button">
-          عرض الرمز
+        <span>{sidebarBooking ? "حجزك القادم" : "لا يوجد حجز قادم"}</span>
+        <strong>{sidebarSession?.title ?? "استكشف الجلسات المتاحة"}</strong>
+        <small>{sidebarBooking ? `${sidebarBooking.weekday} - ${sidebarBooking.time}` : "احجز موعدًا ليظهر هنا"}</small>
+        <button onClick={() => sidebarBooking ? actions.viewBooking(sidebarBooking.id) : onGo("explore")} type="button">
+          {sidebarBooking ? "عرض الرمز" : "استكشاف"}
         </button>
       </div>
     </aside>
@@ -1401,8 +1732,10 @@ function DesktopSidebar({
 }
 
 function DesktopTopbar({
+  actions,
   onGo,
 }: {
+  actions: AuraActions;
   onGo: (screen: Screen) => void;
 }) {
   return (
@@ -1426,8 +1759,8 @@ function DesktopTopbar({
           <Bell size={18} aria-hidden="true" />
         </button>
         <button className="desktop-user" onClick={() => onGo("account")} type="button">
-          <span className="avatar">ح</span>
-          <span>حصة الدويغري</span>
+          <span className="avatar">{actions.userProfile.fullName.trim().charAt(0) || "A"}</span>
+          <span>{actions.userProfile.fullName}</span>
         </button>
       </div>
     </header>
@@ -1441,28 +1774,29 @@ function DesktopHomeScreen({
   actions: AuraActions;
   onGo: (screen: Screen) => void;
 }) {
-  const nextSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
+  const nextBooking = actions.bookings.find((booking) => booking.status === "confirmed");
+  const nextSession = nextBooking ? getSessionById(nextBooking.sessionId) : actions.selectedSession;
   const nextStudio = getStudioById(nextSession.studioId);
   const recommendedSessions = actions.nearbySessions;
   const nearbyStudios = actions.nearbyStudios;
   const quickIntents = [
-    { label: "اليوم", hint: "جلسات متاحة", icon: <Clock3 size={18} /> },
-    { label: "قريب مني", hint: "حسب الموقع", icon: <MapPin size={18} /> },
-    { label: "مناسب للجميع", hint: "مستوى مريح", icon: <Dumbbell size={18} /> },
-    { label: "الأكثر حجزا", hint: "اختيارات شائعة", icon: <Star size={18} /> },
+    { label: "بيلاتس", hint: "كل مراكز البيلاتس", icon: <Dumbbell size={18} />, activity: "بيلاتس" },
+    { label: "يوغا", hint: "كل مراكز اليوغا", icon: <Star size={18} />, activity: "يوغا" },
+    { label: "قريب مني", hint: "حسب موقعك", icon: <MapPin size={18} />, location: true },
+    { label: "كل المراكز", hint: "عرض القائمة", icon: <Search size={18} />, activity: "الكل" },
   ];
 
   return (
     <div className="desktop-home">
       <section className="desktop-hero-panel">
         <div>
-          <span className="kicker">حجزك القادم</span>
-          <h2>{nextSession.title}</h2>
-          <p>{nextStudio.name} - {nextSession.date} {nextSession.time}</p>
+          <span className="kicker">{nextBooking ? "حجزك القادم" : "جاهز لحجزك الأول"}</span>
+          <h2>{nextBooking ? nextSession.title : "اكتشف جلسة تناسب يومك"}</h2>
+          <p>{nextBooking ? `${nextStudio.name} - ${nextBooking.weekday} ${nextBooking.time}` : "اختر المركز واليوم والوقت بخطوات واضحة"}</p>
           <div className="desktop-hero-actions">
-            <button className="primary-button" onClick={() => actions.startBooking()} type="button">
+            <button className="primary-button" onClick={() => onGo("explore")} type="button">
               <CalendarDays size={18} aria-hidden="true" />
-              احجز موعد جديد
+              استكشف المواعيد
             </button>
             <button className="secondary-button" onClick={() => onGo("bookings")} type="button">
               <TicketCheck size={18} aria-hidden="true" />
@@ -1478,9 +1812,13 @@ function DesktopHomeScreen({
           <button
             className="desktop-quick-card"
             key={intent.label}
-            onClick={() =>
-              intent.label === "قريب مني" ? actions.requestUserLocation() : onGo("explore")
-            }
+            onClick={() => {
+              if (intent.location) actions.requestUserLocation();
+              else {
+                actions.setActivity(intent.activity ?? "الكل");
+                onGo("explore");
+              }
+            }}
             type="button"
           >
             {intent.icon}
@@ -1569,11 +1907,11 @@ function DesktopExploreScreen({
         />
         <div className="desktop-filter-summary">
           <span>الترتيب</span>
-          <strong>{actions.locationStatus === "ready" ? "الأقرب لموقعك" : "الأقرب تقديريًا"}</strong>
+          <strong>{actions.locationStatus === "ready" ? "المسافة المباشرة من موقعك" : "قائمة المراكز"}</strong>
         </div>
         <div className="desktop-filter-summary">
           <span>التوفر</span>
-          <strong>أقرب موعد متاح</strong>
+          <strong>{sessions.length} أنواع حصص مؤكدة في النموذج</strong>
         </div>
       </aside>
 
@@ -1641,8 +1979,8 @@ function DesktopStudioScreen({
           </span> : null}
         </div>
         <p className="studio-copy">
-          مركز للحركة الواعية يقدم بيلاتس ويوغا بمستويات مختلفة ومساحات تدريب
-          محدودة العدد.
+          مركز يقدم {getPublicStudioTags(studio)}. راجع القناة الرسمية للمركز لتأكيد
+          التفاصيل قبل الزيارة.
         </p>
         <div className="facility-row" aria-label="المرافق">
           {getPublicStudioFacilities(studio).map((facility) => (
@@ -1670,21 +2008,12 @@ function DesktopStudioScreen({
       </section>
 
       <aside className="desktop-panel desktop-reserve-panel">
-        <span className="kicker">حجز فوري</span>
-        <h3>{studioSessions[0]?.title ?? actions.selectedSession.title}</h3>
-        <p>{studioSessions[0]?.category ?? actions.selectedSession.category} - {studioSessions[0]?.duration ?? actions.selectedSession.duration}</p>
-        <div className="desktop-price-line">
-          <span>يبدأ من</span>
-          <strong>{studioSessions[0]?.price ?? actions.selectedSession.price} ر.س</strong>
-        </div>
-        <button
-          className="primary-button full"
-          onClick={() => actions.startBooking(studioSessions[0]?.id)}
-          type="button"
-        >
-          <CalendarDays size={18} aria-hidden="true" />
-          احجز موعد
-        </button>
+        <span className="kicker">{studioSessions.length ? "حجز متاح" : "بيانات المركز"}</span>
+        <h3>{studioSessions.length ? "اختر نوع الحصة" : "لا توجد مواعيد مؤكدة"}</h3>
+        <p>{studioSessions.length ? "ستظهر لك الأيام والأوقات بعد اختيار الحصة." : "سيظهر الحجز بعد إضافة المركز لجدوله."}</p>
+        {studioSessions.length ? <div className="studio-session-options">
+          {studioSessions.map((session) => <button className="session-option" key={session.id} onClick={() => actions.startBooking(session.id)} type="button"><span><strong>{session.title}</strong><small>{session.duration} · {session.trainer}</small></span><b>{session.price} ر.س</b></button>)}
+        </div> : <button className="primary-button full" disabled type="button">المواعيد غير متاحة</button>}
       </aside>
     </div>
   );
@@ -1697,28 +2026,27 @@ function DesktopScheduleScreen({
   actions: AuraActions;
   onGo: (screen: Screen) => void;
 }) {
-  const [selectedDay, setSelectedDay] = useState(0);
-  const [selectedTime, setSelectedTime] = useState("04:00 م");
   const days = buildScheduleDays();
   const session = actions.selectedSession;
   const studio = getStudioById(session.studioId);
-  const times = [
-    { value: "04:00 م", status: "available" },
-    { value: "04:30 م", status: "available" },
-    { value: "05:00 م", status: "available" },
-    { value: "05:30 م", status: "available" },
-    { value: "06:00 م", status: "booked" },
-    { value: "06:30 م", status: "available" },
-    { value: "07:00 م", status: "available" },
-    { value: "07:30 م", status: "available" },
-    { value: "08:00 م", status: "booked" },
-    { value: "08:30 م", status: "available" },
-    { value: "09:00 م", status: "available" },
-    { value: "09:30 م", status: "booked" },
-    { value: "10:00 م", status: "available" },
-    { value: "10:30 م", status: "available" },
-    { value: "11:00 م", status: "available" },
-  ];
+  const selectedDay = Math.max(0, days.findIndex((day) => day.iso === actions.bookingDraft.dateISO));
+  const times = getTimeSlots(session, days[selectedDay].iso, actions.managedClasses);
+  const hasAvailableTime = times.some((time) => time.status === "available");
+
+  function chooseDay(day: ScheduleDay, index: number) {
+    const daySlots = getTimeSlots(session, day.iso, actions.managedClasses);
+    const firstAvailable = daySlots.find((slot) => slot.status === "available");
+    actions.updateBookingDraft({
+      sessionId: session.id,
+      dateISO: day.iso,
+      dateLabel: day.label,
+      weekday: day.weekday,
+      time: firstAvailable?.value ?? "",
+      time24: firstAvailable?.time24 ?? "",
+      trainer: firstAvailable?.trainer ?? session.trainer,
+    });
+    if (!firstAvailable) actions.notify(`لا توجد أوقات متاحة في ${days[index].weekday}`);
+  }
 
   return (
     <div className="desktop-booking-layout">
@@ -1728,14 +2056,15 @@ function DesktopScheduleScreen({
             <span>{studio.name}</span>
             <h2>تفاصيل الحجز</h2>
           </div>
-          <b>{session.price} ر.س</b>
+          <div className="inline-actions compact-actions"><b>{session.price} ر.س</b><button className="secondary-button" onClick={() => onGo("studio")} type="button"><ChevronLeft size={16} />رجوع</button></div>
         </div>
         <div className="day-strip desktop-day-strip" aria-label="اختيار اليوم">
           {days.map((day, index) => (
             <button
               className={selectedDay === index ? "day-pill selected" : "day-pill"}
+              aria-pressed={selectedDay === index}
               key={`${day.weekday}-${day.date}-${day.month}`}
-              onClick={() => setSelectedDay(index)}
+              onClick={() => chooseDay(day, index)}
               type="button"
             >
               <span>{day.weekday}</span>
@@ -1754,7 +2083,7 @@ function DesktopScheduleScreen({
         <div className="time-slot-grid desktop-time-grid">
           {times.map((time) => {
             const isBooked = time.status === "booked";
-            const isSelected = selectedTime === time.value && !isBooked;
+            const isSelected = actions.bookingDraft.time24 === time.time24 && !isBooked;
 
             return (
               <button
@@ -1762,8 +2091,15 @@ function DesktopScheduleScreen({
                   isSelected ? "selected" : ""
                 }`}
                 disabled={isBooked}
+                aria-pressed={isSelected}
                 key={time.value}
-                onClick={() => setSelectedTime(time.value)}
+                onClick={() => actions.updateBookingDraft({
+                  ...actions.bookingDraft,
+                  sessionId: session.id,
+                  time: time.value,
+                  time24: time.time24,
+                  trainer: time.trainer,
+                })}
                 type="button"
               >
                 <strong>{time.value}</strong>
@@ -1772,17 +2108,18 @@ function DesktopScheduleScreen({
             );
           })}
         </div>
+        {times.length === 0 ? <div className="empty-state compact"><Clock3 size={24} /><strong>لا توجد حصص في هذا اليوم</strong><span>اختر يومًا آخر من الأعلى.</span></div> : null}
       </section>
 
       <aside className="desktop-panel desktop-reserve-panel">
         <span className="kicker">ملخص الموعد</span>
         <h3>{session.title}</h3>
-        <p>{days[selectedDay].weekday} - {selectedTime}</p>
+        <p>{days[selectedDay].weekday} - {actions.bookingDraft.time || "لم يتم اختيار وقت"}</p>
         <div className="desktop-price-line">
           <span>الإجمالي</span>
           <strong>{session.price + Math.round(session.price * 0.15)} ر.س</strong>
         </div>
-        <button className="primary-button full" onClick={() => onGo("checkout")} type="button">
+        <button className="primary-button full" disabled={!hasAvailableTime || !actions.bookingDraft.time24} onClick={() => onGo("checkout")} type="button">
           <TicketCheck size={18} aria-hidden="true" />
           متابعة الحجز
         </button>
@@ -1791,32 +2128,82 @@ function DesktopScheduleScreen({
   );
 }
 
+function BookingCollection({
+  actions,
+  items,
+  desktop = false,
+  emptyLabel,
+}: {
+  actions: AuraActions;
+  items: BookingRecord[];
+  desktop?: boolean;
+  emptyLabel: string;
+}) {
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+
+  if (items.length === 0) {
+    return <div className="empty-state"><CalendarDays size={28} aria-hidden="true" /><strong>{emptyLabel}</strong><span>ستظهر حجوزاتك هنا عند توفرها.</span></div>;
+  }
+
+  return <div className={desktop ? "desktop-booking-list" : "booking-list"}>
+    {items.map((booking) => {
+      const session = getSessionById(booking.sessionId);
+      const studio = getStudioById(session.studioId);
+      const isConfirmed = booking.status === "confirmed";
+      const statusLabels: Record<BookingStatus, string> = {
+        confirmed: "مؤكد",
+        cancelled: "ملغي",
+        completed: "مكتمل",
+        "no-show": "لم يحضر",
+      };
+      return <article className={desktop ? "desktop-booking-card" : "booking-card"} key={booking.id}>
+        <span className={isConfirmed ? "status-pill" : `status-pill ${booking.status}`}>{statusLabels[booking.status]}</span>
+        <h3>{session.title}</h3>
+        <p>{studio.name} - {booking.weekday}، {booking.dateLabel} {booking.time}</p>
+        <small className="booking-reference">رقم الحجز {booking.id}</small>
+        {isConfirmed ? <div className={desktop ? "inline-actions" : "booking-actions"}>
+          <button className="secondary-button" onClick={() => actions.viewBooking(booking.id)} type="button"><TicketCheck size={16} aria-hidden="true" />رمز الحضور</button>
+          <button className="ghost-button" onClick={() => setConfirmingId(booking.id)} type="button">إلغاء</button>
+        </div> : null}
+        {confirmingId === booking.id ? <div className="cancel-confirmation" role="alert">
+          <strong>تأكيد إلغاء الحجز؟</strong>
+          <span>سيعود المقعد إلى قائمة الأوقات المتاحة.</span>
+          <div className="inline-actions">
+            <button className="ghost-button danger" onClick={() => { actions.cancelBooking(booking.id); setConfirmingId(null); }} type="button">تأكيد الإلغاء</button>
+            <button className="secondary-button" onClick={() => setConfirmingId(null)} type="button">الاحتفاظ بالحجز</button>
+          </div>
+        </div> : null}
+      </article>;
+    })}
+  </div>;
+}
+
 function DesktopBookingsScreen({
   actions,
   bookingTab,
   setBookingTab,
-  onGo,
 }: {
   actions: AuraActions;
   bookingTab: string;
   setBookingTab: (value: string) => void;
-  onGo: (screen: Screen) => void;
 }) {
-  const bookingSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
-  const bookingStudio = getStudioById(bookingSession.studioId);
-  const hasConfirmedBooking = actions.booking?.status === "confirmed";
+  const visibleBookings = actions.bookings.filter((booking) =>
+    bookingTab === "القادمة" ? booking.status === "confirmed" : booking.status !== "confirmed",
+  );
 
   return (
     <div className="desktop-panel">
       <div className="desktop-panel-heading">
         <div>
-          <span>حصة الدويغري</span>
+          <span>{actions.userProfile.fullName}</span>
           <h2>حجوزاتي</h2>
         </div>
-        <div className="segmented desktop-booking-tabs">
+        <div className="segmented desktop-booking-tabs" role="tablist" aria-label="أقسام الحجوزات">
           {["القادمة", "السابقة"].map((item) => (
             <button
               className={bookingTab === item ? "selected" : ""}
+              aria-selected={bookingTab === item}
+              role="tab"
               key={item}
               onClick={() => setBookingTab(item)}
               type="button"
@@ -1826,42 +2213,7 @@ function DesktopBookingsScreen({
           ))}
         </div>
       </div>
-      {bookingTab === "القادمة" && hasConfirmedBooking ? (
-        <div className="desktop-booking-card">
-          <span className="status-pill">مؤكد</span>
-          <h3>{bookingSession.title}</h3>
-          <p>{bookingStudio.name} - {bookingSession.date} {bookingSession.time}</p>
-          <div className="inline-actions">
-            <button className="secondary-button" onClick={() => onGo("success")} type="button">
-              <TicketCheck size={16} aria-hidden="true" />
-              رمز الحضور
-            </button>
-            <button
-              className="ghost-button"
-              onClick={actions.cancelBooking}
-              type="button"
-            >
-              إلغاء
-            </button>
-          </div>
-        </div>
-      ) : bookingTab === "القادمة" ? (
-        <div className="empty-state">
-          <CalendarDays size={28} aria-hidden="true" />
-          <strong>لا توجد حجوزات قادمة</strong>
-          <span>احجز جلسة جديدة لتظهر هنا.</span>
-        </div>
-      ) : (
-        <div className="empty-state">
-          <CalendarDays size={28} aria-hidden="true" />
-          <strong>{actions.booking?.status === "cancelled" ? "آخر حجز تم إلغاؤه" : "لا توجد حجوزات سابقة"}</strong>
-          <span>
-            {actions.booking?.status === "cancelled"
-              ? `${bookingSession.title} - ${bookingStudio.name}`
-              : "ستظهر الجلسات المكتملة هنا."}
-          </span>
-        </div>
-      )}
+      <BookingCollection actions={actions} desktop items={visibleBookings} emptyLabel={bookingTab === "القادمة" ? "لا توجد حجوزات قادمة" : "لا توجد حجوزات سابقة"} />
     </div>
   );
 }
@@ -1886,7 +2238,7 @@ function DesktopAccountScreen({
           <div><span>إعدادات العميل</span><h2>حسابي</h2></div>
         </div>
         <div className="profile-card desktop-profile-card">
-          <div className="avatar">ح</div>
+          <div className="avatar">{actions.userProfile.fullName.trim().charAt(0) || "A"}</div>
           <div>
             <strong>{actions.userProfile.fullName}</strong>
             <span>عضو Aura</span>
@@ -1914,10 +2266,10 @@ function DesktopAccountScreen({
   );
 }
 
-function DesktopLoginScreen({ onGo }: { onGo: (screen: Screen) => void }) {
+function DesktopLoginScreen({ customerPhone, onGo }: { customerPhone: string; onGo: (screen: Screen) => void }) {
   return (
     <div className="desktop-login-panel">
-      <LoginScreen onStart={onGo} />
+      <LoginScreen customerPhone={customerPhone} onStart={onGo} />
     </div>
   );
 }
@@ -1945,10 +2297,11 @@ function DesktopSessionTile({
       onClick={() => onSelect(session.id)}
       type="button"
     >
-      <div
+      <img
         className="desktop-tile-image"
-        style={coverImageStyle(session.image)}
-        aria-hidden="true"
+        src={session.image}
+        alt=""
+        loading="lazy"
       />
       <div>
         <span>{session.date} - {session.time}</span>
@@ -1977,10 +2330,11 @@ function DesktopStudioTile({
       onClick={() => onSelect(studio.id)}
       type="button"
     >
-      <div
+      <img
         className="desktop-studio-thumb"
-        style={coverImageStyle(studio.image)}
-        aria-hidden="true"
+        src={studio.image}
+        alt=""
+        loading="lazy"
       />
       <div className="desktop-studio-tile-copy">
         <div className="desktop-studio-title-row">
@@ -2006,10 +2360,10 @@ function normalizePhoneDigits(value: string) {
     .slice(0, 10);
 }
 
-function LoginScreen({ onStart }: { onStart: (screen: Screen) => void }) {
+function LoginScreen({ customerPhone, onStart }: { customerPhone: string; onStart: (screen: Screen) => void }) {
   const phoneInputId = useId();
   const [phone, setPhone] = useState("");
-  const [acceptedTerms, setAcceptedTerms] = useState(true);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loginError, setLoginError] = useState("");
 
   function handleLogin(event: FormEvent<HTMLFormElement>) {
@@ -2026,7 +2380,7 @@ function LoginScreen({ onStart }: { onStart: (screen: Screen) => void }) {
       return;
     }
 
-    if (normalizedPhone === "0511111111") {
+    if (normalizedPhone === customerPhone) {
       onStart("home");
       return;
     }
@@ -2077,12 +2431,16 @@ function LoginScreen({ onStart }: { onStart: (screen: Screen) => void }) {
           />
           <span>أوافق على الشروط وسياسة الخصوصية</span>
         </label>
+        <details className="legal-details">
+          <summary>قراءة الشروط والخصوصية</summary>
+          <p>هذه نسخة تجريبية للعرض. لا تتم معالجة دفعات حقيقية، وتُحفظ التغييرات محليًا على هذا الجهاز فقط.</p>
+        </details>
 
         <button className="primary-button full" disabled={!acceptedTerms || phone.length !== 10} type="submit">
           <ChevronLeft size={18} aria-hidden="true" />
           متابعة
         </button>
-        <small className="login-security-note">يُستخدم رقمك لتوجيهك تلقائيًا إلى حساب العميل أو حساب المركز.</small>
+        <small className="login-security-note">بيئة عرض تجريبية: لا يتم إرسال رمز تحقق أو تنفيذ عملية مالية حقيقية.</small>
       </form>
     </div>
   );
@@ -2095,16 +2453,17 @@ function HomeScreen({
   actions: AuraActions;
   onGo: (screen: Screen) => void;
 }) {
-  const nextSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
+  const nextBooking = actions.bookings.find((booking) => booking.status === "confirmed");
+  const nextSession = nextBooking ? getSessionById(nextBooking.sessionId) : actions.selectedSession;
   const nextStudio = getStudioById(nextSession.studioId);
   const recommendedSessions = actions.nearbySessions.slice(0, 2);
   const nearestStudio = actions.nearbyStudios[0];
   const nearestStudioRating = getNumericRating(nearestStudio);
   const quickIntents = [
-    { label: "اليوم", hint: "جلسات قريبة", icon: <Clock3 size={17} /> },
-    { label: "قريب مني", hint: "حسب الموقع", icon: <MapPin size={17} /> },
-    { label: "مناسب للجميع", hint: "مستوى مريح", icon: <Dumbbell size={17} /> },
-    { label: "الأكثر حجزا", hint: "اختيارات شائعة", icon: <Star size={17} /> },
+    { label: "بيلاتس", hint: "مراكز البيلاتس", icon: <Dumbbell size={17} />, activity: "بيلاتس" },
+    { label: "يوغا", hint: "مراكز اليوغا", icon: <Star size={17} />, activity: "يوغا" },
+    { label: "قريب مني", hint: "حسب موقعك", icon: <MapPin size={17} />, location: true },
+    { label: "كل المراكز", hint: "عرض القائمة", icon: <Search size={17} />, activity: "الكل" },
   ];
 
   return (
@@ -2119,13 +2478,13 @@ function HomeScreen({
 
       <button
         className="home-next-card"
-        onClick={() => onGo("bookings")}
+        onClick={() => nextBooking ? onGo("bookings") : onGo("explore")}
         type="button"
       >
         <div>
-          <span>حجزك القادم</span>
-          <strong>{nextSession.title}</strong>
-          <p>{nextStudio.name} - {nextSession.date} {nextSession.time}</p>
+          <span>{nextBooking ? "حجزك القادم" : "ابدأ حجزك"}</span>
+          <strong>{nextBooking ? nextSession.title : "اكتشف جلسة تناسبك"}</strong>
+          <p>{nextBooking ? `${nextStudio.name} - ${nextBooking.weekday} ${nextBooking.time}` : "اختر المركز والموعد المناسب"}</p>
         </div>
         <CalendarDays size={22} aria-hidden="true" />
       </button>
@@ -2140,9 +2499,13 @@ function HomeScreen({
           <button
             className="quick-intent-card"
             key={intent.label}
-            onClick={() =>
-              intent.label === "قريب مني" ? actions.requestUserLocation() : onGo("explore")
-            }
+            onClick={() => {
+              if (intent.location) actions.requestUserLocation();
+              else {
+                actions.setActivity(intent.activity ?? "الكل");
+                onGo("explore");
+              }
+            }}
             type="button"
           >
             {intent.icon}
@@ -2250,7 +2613,7 @@ function ExploreScreen({
         <span>
           {actions.locationStatus === "ready"
             ? "مرتبة حسب الأقرب لك"
-            : "مرتبة حسب أقرب موعد متاح"}
+            : "فعّل الموقع لترتيبها حسب المسافة المباشرة"}
         </span>
       </div>
 
@@ -2298,7 +2661,8 @@ function StudioScreen({
           className="icon-button"
           onClick={() => actions.toggleFavorite(studio.id)}
           type="button"
-          aria-label="إضافة للمفضلة"
+          aria-label={isFavorite ? "إزالة من المفضلة" : "إضافة للمفضلة"}
+          aria-pressed={isFavorite}
           title="إضافة للمفضلة"
         >
           <Heart size={18} fill={isFavorite ? "currentColor" : "none"} aria-hidden="true" />
@@ -2330,8 +2694,8 @@ function StudioScreen({
       </div>
 
       <p className="studio-copy">
-        مركز بوتيك للحركة الواعية، يقدم جلسات بيلاتس ويوغا بمستويات مختلفة
-        ومساحات تدريب محدودة العدد.
+        مركز يقدم {getPublicStudioTags(studio)}. راجع القناة الرسمية للمركز لتأكيد
+        التفاصيل قبل الزيارة.
       </p>
 
       <div className="facility-row" aria-label="المرافق">
@@ -2340,12 +2704,12 @@ function StudioScreen({
         ))}
       </div>
 
-      <SectionTitle title="معلومات الحجز" action="حجز فوري" />
+      <SectionTitle title="معلومات الحجز" action={studioSessions.length ? "متاح" : "غير متاح"} />
       <div className="studio-profile-grid">
         <MiniStat icon={<Clock3 size={16} />} label={getPublicStudioHours(studio)} />
         <MiniStat icon={<Dumbbell size={16} />} label={getPublicStudioTags(studio)} />
-        <MiniStat icon={<UserRound size={16} />} label="6 مدربين" />
-        <MiniStat icon={<TicketCheck size={16} />} label="حجز فوري" />
+        <MiniStat icon={<UserRound size={16} />} label={studioSessions.length ? "مدربون موثقون بالحصة" : "بانتظار بيانات المدربين"} />
+        <MiniStat icon={<TicketCheck size={16} />} label={studioSessions.length ? "حجز متاح" : "المواعيد غير متاحة"} />
       </div>
 
       <div className="inline-actions">
@@ -2375,15 +2739,12 @@ function StudioScreen({
           لك بخطوات واضحة وسريعة.
         </p>
       </section>
-
-      <button
-        className="primary-button sticky"
-        onClick={() => actions.startBooking(studioSessions[0]?.id)}
-        type="button"
-      >
-        <CalendarDays size={18} aria-hidden="true" />
-        احجز موعد
-      </button>
+      <section className="plain-section studio-booking-section">
+        <h3>{studioSessions.length ? "اختر نوع الحصة" : "المواعيد"}</h3>
+        {studioSessions.length ? <div className="studio-session-options">
+          {studioSessions.map((session) => <button className="session-option" key={session.id} onClick={() => actions.startBooking(session.id)} type="button"><span><strong>{session.title}</strong><small>{session.duration} · {session.trainer}</small></span><b>{session.price} ر.س</b></button>)}
+        </div> : <div className="empty-state compact"><CalendarDays size={24} /><strong>لا توجد مواعيد مؤكدة</strong><span>سيظهر الحجز بعد إضافة المركز لجدوله.</span></div>}
+      </section>
     </div>
   );
 }
@@ -2395,36 +2756,37 @@ function ScheduleScreen({
   actions: AuraActions;
   onGo: (screen: Screen) => void;
 }) {
-  const [selectedDay, setSelectedDay] = useState(0);
-  const [selectedTime, setSelectedTime] = useState("04:00 م");
   const days = buildScheduleDays();
   const session = actions.selectedSession;
   const studio = getStudioById(session.studioId);
-  const times = [
-    { value: "04:00 م", status: "available" },
-    { value: "04:30 م", status: "available" },
-    { value: "05:00 م", status: "available" },
-    { value: "05:30 م", status: "available" },
-    { value: "06:00 م", status: "booked" },
-    { value: "06:30 م", status: "available" },
-    { value: "07:00 م", status: "available" },
-    { value: "07:30 م", status: "available" },
-    { value: "08:00 م", status: "booked" },
-    { value: "08:30 م", status: "available" },
-    { value: "09:00 م", status: "available" },
-    { value: "09:30 م", status: "booked" },
-    { value: "10:00 م", status: "available" },
-    { value: "10:30 م", status: "available" },
-    { value: "11:00 م", status: "available" },
-  ];
+  const selectedDay = Math.max(0, days.findIndex((day) => day.iso === actions.bookingDraft.dateISO));
+  const times = getTimeSlots(session, days[selectedDay].iso, actions.managedClasses);
+  const hasAvailableTime = times.some((time) => time.status === "available");
+
+  function chooseDay(day: ScheduleDay) {
+    const daySlots = getTimeSlots(session, day.iso, actions.managedClasses);
+    const firstAvailable = daySlots.find((slot) => slot.status === "available");
+    actions.updateBookingDraft({
+      sessionId: session.id,
+      dateISO: day.iso,
+      dateLabel: day.label,
+      weekday: day.weekday,
+      time: firstAvailable?.value ?? "",
+      time24: firstAvailable?.time24 ?? "",
+      trainer: firstAvailable?.trainer ?? session.trainer,
+    });
+    if (!firstAvailable) actions.notify(`لا توجد أوقات متاحة في ${day.weekday}`);
+  }
 
   return (
     <div className="screen-content schedule-screen">
       <AppHeader
         title="تفاصيل الحجز"
         subtitle={studio.name}
-        action={<CalendarDays size={18} aria-hidden="true" />}
-        onAction={() => actions.addToCalendar()}
+        action={<ChevronRight size={18} aria-hidden="true" />}
+        actionLabel="رجوع إلى المركز"
+        backAction
+        onAction={() => onGo("studio")}
       />
 
       <div className="schedule-studio-summary">
@@ -2440,8 +2802,9 @@ function ScheduleScreen({
         {days.map((day, index) => (
           <button
             className={selectedDay === index ? "day-pill selected" : "day-pill"}
+            aria-pressed={selectedDay === index}
             key={`${day.weekday}-${day.date}-${day.month}`}
-            onClick={() => setSelectedDay(index)}
+            onClick={() => chooseDay(day)}
             type="button"
           >
             <span>{day.weekday}</span>
@@ -2461,7 +2824,7 @@ function ScheduleScreen({
       <div className="time-slot-grid">
         {times.map((time) => {
           const isBooked = time.status === "booked";
-          const isSelected = selectedTime === time.value && !isBooked;
+          const isSelected = actions.bookingDraft.time24 === time.time24 && !isBooked;
 
           return (
             <button
@@ -2469,8 +2832,15 @@ function ScheduleScreen({
                 isSelected ? "selected" : ""
               }`}
               disabled={isBooked}
+              aria-pressed={isSelected}
               key={time.value}
-              onClick={() => setSelectedTime(time.value)}
+              onClick={() => actions.updateBookingDraft({
+                ...actions.bookingDraft,
+                sessionId: session.id,
+                time: time.value,
+                time24: time.time24,
+                trainer: time.trainer,
+              })}
               type="button"
             >
               <strong>{time.value}</strong>
@@ -2479,8 +2849,9 @@ function ScheduleScreen({
           );
         })}
       </div>
+      {times.length === 0 ? <div className="empty-state compact"><Clock3 size={24} /><strong>لا توجد حصص في هذا اليوم</strong><span>اختر يومًا آخر من الأعلى.</span></div> : null}
 
-      <button className="primary-button sticky" onClick={() => onGo("checkout")}>
+      <button className="primary-button sticky" disabled={!hasAvailableTime || !actions.bookingDraft.time24} onClick={() => onGo("checkout")}>
         <TicketCheck size={18} aria-hidden="true" />
         متابعة الحجز
       </button>
@@ -2574,11 +2945,13 @@ function SessionScreen({
 
 function CheckoutScreen({
   session,
+  bookingDraft,
   accepted,
   setAccepted,
   onGo,
 }: {
   session: Session;
+  bookingDraft: BookingDraft;
   accepted: boolean;
   setAccepted: (value: boolean) => void;
   onGo: (screen: Screen) => void;
@@ -2592,7 +2965,10 @@ function CheckoutScreen({
       <AppHeader
         title="ملخص الحجز"
         subtitle="راجع التفاصيل قبل الدفع"
-        action={<TicketCheck size={18} aria-hidden="true" />}
+        action={<ChevronRight size={18} aria-hidden="true" />}
+        actionLabel="العودة لاختيار الموعد"
+        backAction
+        onAction={() => onGo("schedule")}
       />
 
       <div className="booking-summary">
@@ -2601,12 +2977,12 @@ function CheckoutScreen({
         <div className="summary-row">
           <CalendarDays size={16} aria-hidden="true" />
           <span>
-            {session.date} - {session.time}
+            {bookingDraft.weekday}، {bookingDraft.dateLabel} - {bookingDraft.time}
           </span>
         </div>
         <div className="summary-row">
           <UserRound size={16} aria-hidden="true" />
-          <span>المدرب: {session.trainer}</span>
+          <span>المدرب: {bookingDraft.trainer}</span>
         </div>
         <div className="summary-row">
           <MapPin size={16} aria-hidden="true" />
@@ -2644,10 +3020,12 @@ function CheckoutScreen({
 
 function PaymentScreen({
   actions,
+  onGo,
   processing,
   payNow,
 }: {
   actions: AuraActions;
+  onGo: (screen: Screen) => void;
   processing: boolean;
   payNow: () => void;
 }) {
@@ -2657,8 +3035,11 @@ function PaymentScreen({
     <div className="screen-content payment-screen">
       <AppHeader
         title="الدفع"
-        subtitle="اختر طريقة الدفع المناسبة"
-        action={<WalletCards size={18} aria-hidden="true" />}
+        subtitle="محاكاة دفع للعرض فقط"
+        action={<ChevronRight size={18} aria-hidden="true" />}
+        actionLabel="العودة إلى ملخص الحجز"
+        backAction
+        onAction={() => onGo("checkout")}
       />
 
       <button
@@ -2694,9 +3075,9 @@ function PaymentScreen({
       </button>
 
       <div className="card-preview">
-        <span>Aura Pay</span>
-        <strong>•••• 4821</strong>
-        <small>إجمالي العملية {total} ر.س</small>
+        <span>{actions.paymentMethod === "Apple Pay" ? "Apple Pay - تجريبي" : "بطاقة محفوظة - تجريبي"}</span>
+        <strong>{actions.paymentMethod === "Apple Pay" ? "Aura Demo" : "•••• 4821"}</strong>
+        <small>لن يتم خصم مبلغ حقيقي · الإجمالي {total} ر.س</small>
       </div>
 
       <button
@@ -2714,15 +3095,18 @@ function PaymentScreen({
 
 function SuccessScreen({
   actions,
-  session,
   onGo,
 }: {
   actions: AuraActions;
-  session: Session;
   onGo: (screen: Screen) => void;
 }) {
+  const booking = actions.selectedBooking;
+  if (!booking) {
+    return <div className="screen-content success-screen"><div className="empty-state"><TicketCheck size={28} /><strong>لا يوجد حجز محدد</strong><span>اختر حجزًا من قائمة حجوزاتك لعرض الرمز.</span><button className="primary-button" onClick={() => onGo("bookings")} type="button">العودة إلى حجوزاتي</button></div></div>;
+  }
+  const session = getSessionById(booking.sessionId);
   const studio = getStudioById(session.studioId);
-  const bookingId = actions.booking?.id ?? "AUR-2481";
+  const qrValue = JSON.stringify({ app: "Aura", bookingId: booking.id, sessionId: session.id });
 
   return (
     <div className="screen-content success-screen">
@@ -2730,20 +3114,18 @@ function SuccessScreen({
         <Check size={34} aria-hidden="true" />
       </div>
       <h2>تم تأكيد الحجز</h2>
-      <p>رقم الحجز {bookingId}</p>
+      <p>رقم الحجز {booking.id}</p>
 
       <div className="confirmed-card">
         <strong>{session.title}</strong>
         <span>
-          {session.date} - {session.time}
+          {booking.weekday}، {booking.dateLabel} - {booking.time}
         </span>
         <span>{studio.name}، {studio.area}</span>
       </div>
 
       <div className="qr-box" aria-label="رمز الحضور">
-        {Array.from({ length: 49 }).map((_, index) => (
-          <i key={index} className={(index * 7) % 5 < 2 ? "dark" : ""} />
-        ))}
+        <QRCodeSVG value={qrValue} size={188} bgColor="transparent" fgColor="currentColor" level="M" />
       </div>
 
       <div className="two-actions">
@@ -2773,30 +3155,29 @@ function BookingsScreen({
   actions,
   bookingTab,
   setBookingTab,
-  onGo,
 }: {
   actions: AuraActions;
   bookingTab: string;
   setBookingTab: (value: string) => void;
   onGo: (screen: Screen) => void;
 }) {
-  const bookingSession = actions.booking ? getSessionById(actions.booking.sessionId) : actions.selectedSession;
-  const bookingStudio = getStudioById(bookingSession.studioId);
-  const hasConfirmedBooking = actions.booking?.status === "confirmed";
+  const visibleBookings = actions.bookings.filter((booking) =>
+    bookingTab === "القادمة" ? booking.status === "confirmed" : booking.status !== "confirmed",
+  );
 
   return (
     <div className="screen-content">
       <AppHeader
         title="حجوزاتي"
         subtitle="تابع المواعيد والحضور"
-        action={<CalendarDays size={18} aria-hidden="true" />}
-        onAction={() => actions.addToCalendar()}
       />
 
-      <div className="segmented">
+      <div className="segmented" role="tablist" aria-label="أقسام الحجوزات">
         {["القادمة", "السابقة"].map((item) => (
           <button
             className={bookingTab === item ? "selected" : ""}
+            aria-selected={bookingTab === item}
+            role="tab"
             key={item}
             onClick={() => setBookingTab(item)}
             type="button"
@@ -2806,43 +3187,25 @@ function BookingsScreen({
         ))}
       </div>
 
-      {bookingTab === "القادمة" && hasConfirmedBooking ? (
-        <div className="booking-card">
-          <span className="status-pill">مؤكد</span>
-          <h2>{bookingSession.title}</h2>
-          <p>{bookingStudio.name} - {bookingSession.date} {bookingSession.time}</p>
-          <div className="booking-actions">
-            <button className="secondary-button" onClick={() => onGo("success")} type="button">
-              <TicketCheck size={16} aria-hidden="true" />
-              رمز الحضور
-            </button>
-            <button className="ghost-button" onClick={actions.cancelBooking} type="button">
-              إلغاء
-            </button>
-          </div>
-        </div>
-      ) : bookingTab === "القادمة" ? (
-        <div className="empty-state">
-          <CalendarDays size={28} aria-hidden="true" />
-          <strong>لا توجد حجوزات قادمة</strong>
-          <span>احجز جلسة جديدة لتظهر هنا.</span>
-        </div>
-      ) : (
-        <div className="empty-state">
-          <CalendarDays size={28} aria-hidden="true" />
-          <strong>{actions.booking?.status === "cancelled" ? "آخر حجز تم إلغاؤه" : "لا توجد حجوزات سابقة"}</strong>
-          <span>
-            {actions.booking?.status === "cancelled"
-              ? `${bookingSession.title} - ${bookingStudio.name}`
-              : "ستظهر الجلسات المكتملة هنا."}
-          </span>
-        </div>
-      )}
+      <BookingCollection actions={actions} items={visibleBookings} emptyLabel={bookingTab === "القادمة" ? "لا توجد حجوزات قادمة" : "لا توجد حجوزات سابقة"} />
     </div>
   );
 }
 
 const initialManagedBookings: ManagedBooking[] = [
+  {
+    id: "AUR-2481",
+    customer: "حصة الدويغري",
+    phone: "0511111111",
+    className: "Pilates Reformer",
+    date: "اليوم",
+    time: "04:00 م",
+    dateISO: addDaysISO(0),
+    time24: "16:00",
+    trainer: "ليان السالم",
+    payment: "مدفوع",
+    status: "مؤكد",
+  },
   {
     id: "AUR-3104",
     customer: "نورة العتيبي",
@@ -2850,7 +3213,9 @@ const initialManagedBookings: ManagedBooking[] = [
     className: "Pilates Reformer",
     date: "اليوم",
     time: "4:00 م",
-    trainer: "ليان",
+    dateISO: addDaysISO(0),
+    time24: "16:00",
+    trainer: "ليان السالم",
     payment: "مدفوع",
     status: "مؤكد",
   },
@@ -2861,7 +3226,9 @@ const initialManagedBookings: ManagedBooking[] = [
     className: "Mat Pilates",
     date: "اليوم",
     time: "5:30 م",
-    trainer: "سارة",
+    dateISO: addDaysISO(0),
+    time24: "17:30",
+    trainer: "سارة العبدالله",
     payment: "مدفوع",
     status: "مؤكد",
   },
@@ -2872,7 +3239,9 @@ const initialManagedBookings: ManagedBooking[] = [
     className: "Pilates Reformer",
     date: "اليوم",
     time: "7:00 م",
-    trainer: "ليان",
+    dateISO: addDaysISO(0),
+    time24: "19:00",
+    trainer: "ليان السالم",
     payment: "غير مدفوع",
     status: "مؤكد",
   },
@@ -2883,7 +3252,9 @@ const initialManagedBookings: ManagedBooking[] = [
     className: "Core Strength",
     date: "أمس",
     time: "8:30 م",
-    trainer: "نواف",
+    dateISO: addDaysISO(-1),
+    time24: "20:30",
+    trainer: "نواف الحربي",
     payment: "مدفوع",
     status: "حضر",
   },
@@ -2894,17 +3265,19 @@ const initialManagedBookings: ManagedBooking[] = [
     className: "Mat Pilates",
     date: "أمس",
     time: "6:00 م",
-    trainer: "سارة",
+    dateISO: addDaysISO(-1),
+    time24: "18:00",
+    trainer: "سارة العبدالله",
     payment: "مدفوع",
     status: "لم يحضر",
   },
 ];
 
 const initialManagedClasses: ManagedClass[] = [
-  { id: "CLS-21", title: "Pilates Reformer", date: "اليوم", time: "4:00 م", duration: "50 دقيقة", trainer: "ليان", capacity: 8, booked: 6 },
-  { id: "CLS-22", title: "Mat Pilates", date: "اليوم", time: "5:30 م", duration: "45 دقيقة", trainer: "سارة", capacity: 10, booked: 7 },
-  { id: "CLS-23", title: "Pilates Reformer", date: "اليوم", time: "7:00 م", duration: "50 دقيقة", trainer: "ليان", capacity: 8, booked: 8 },
-  { id: "CLS-24", title: "Core Strength", date: "غدًا", time: "6:30 م", duration: "45 دقيقة", trainer: "نواف", capacity: 8, booked: 3 },
+  { id: "CLS-21", title: "Pilates Reformer", dateISO: addDaysISO(0), time24: "16:00", duration: "50 دقيقة", trainer: "ليان السالم", capacity: 8, booked: 6 },
+  { id: "CLS-22", title: "Mat Pilates", dateISO: addDaysISO(0), time24: "17:30", duration: "45 دقيقة", trainer: "سارة العبدالله", capacity: 10, booked: 7 },
+  { id: "CLS-23", title: "Pilates Reformer", dateISO: addDaysISO(0), time24: "19:00", duration: "50 دقيقة", trainer: "ليان السالم", capacity: 8, booked: 8 },
+  { id: "CLS-24", title: "Pilates Reformer", dateISO: addDaysISO(1), time24: "18:30", duration: "50 دقيقة", trainer: "ليان السالم", capacity: 8, booked: 3 },
 ];
 
 const initialManagedTrainers: ManagedTrainer[] = [
@@ -2924,29 +3297,53 @@ function getManagementStatusClass(status: ManagedBookingStatus) {
 }
 
 function StudioManagementScreen({
+  bookings,
+  classes,
+  customerBookings,
+  trainers,
   notify,
   onExit,
+  setBookings,
+  setClasses,
+  setCustomerBookings,
+  setTrainers,
 }: {
+  bookings: ManagedBooking[];
+  classes: ManagedClass[];
+  customerBookings: BookingRecord[];
+  trainers: ManagedTrainer[];
   notify: (message: string) => void;
   onExit: () => void;
+  setBookings: (value: ManagedBooking[] | ((current: ManagedBooking[]) => ManagedBooking[])) => void;
+  setClasses: (value: ManagedClass[] | ((current: ManagedClass[]) => ManagedClass[])) => void;
+  setCustomerBookings: (value: BookingRecord[] | ((current: BookingRecord[]) => BookingRecord[])) => void;
+  setTrainers: (value: ManagedTrainer[] | ((current: ManagedTrainer[]) => ManagedTrainer[])) => void;
 }) {
   const [activeTab, setActiveTab] = useState<ManagementTab>("bookings");
-  const [bookings, setBookings] = useState(initialManagedBookings);
-  const [classes, setClasses] = useState(initialManagedClasses);
-  const [trainers, setTrainers] = useState(initialManagedTrainers);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("الكل");
   const [panel, setPanel] = useState<"class" | "trainer" | "booking" | null>(null);
   const [selectedBookingId, setSelectedBookingId] = useState(initialManagedBookings[0].id);
   const [newClass, setNewClass] = useState({
     title: "Pilates Reformer",
-    date: "2026-08-04",
+    date: addDaysISO(0),
     time: "18:00",
     duration: "50 دقيقة",
     trainer: initialManagedTrainers[0].name,
     capacity: "8",
   });
   const [newTrainer, setNewTrainer] = useState({ name: "", specialty: "", phone: "" });
+  const panelRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!panel) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPanel(null);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    window.setTimeout(() => panelRef.current?.querySelector<HTMLElement>("form input, form select, button")?.focus(), 0);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [panel]);
 
   const filteredBookings = bookings.filter((booking) => {
     const matchesQuery = `${booking.customer} ${booking.id} ${booking.className}`
@@ -2955,23 +3352,56 @@ function StudioManagementScreen({
     const matchesStatus = statusFilter === "الكل" || booking.status === statusFilter;
     return matchesQuery && matchesStatus;
   });
+  const sortedClasses = [...classes].sort((first, second) =>
+    `${first.dateISO}T${first.time24}`.localeCompare(`${second.dateISO}T${second.time24}`),
+  );
   const selectedBooking = bookings.find((booking) => booking.id === selectedBookingId);
 
   function updateBookingStatus(id: string, status: ManagedBookingStatus) {
+    const booking = bookings.find((item) => item.id === id);
+    if (!booking || booking.status === "ملغي") {
+      notify("لا يمكن تعديل حجز ملغي");
+      return;
+    }
     setBookings((current) => current.map((booking) => booking.id === id ? { ...booking, status } : booking));
+    const customerStatus: Record<ManagedBookingStatus, BookingStatus> = {
+      "مؤكد": "confirmed",
+      "حضر": "completed",
+      "لم يحضر": "no-show",
+      "ملغي": "cancelled",
+    };
+    setCustomerBookings((current) => current.map((item) => item.id === id ? { ...item, status: customerStatus[status] } : item));
+    if (status === "ملغي") {
+      const customerBooking = customerBookings.find((item) => item.id === id);
+      const dateISO = customerBooking?.dateISO ?? booking.dateISO;
+      const time24 = customerBooking?.time24 ?? booking.time24;
+      if (dateISO && time24) {
+        setClasses((current) => current.map((item) =>
+          item.title === booking.className &&
+          item.dateISO === dateISO &&
+          item.time24 === time24
+            ? { ...item, booked: Math.max(0, item.booked - 1) }
+            : item,
+        ));
+      }
+    }
     notify(`تم تحديث حالة الحجز إلى ${status}`);
   }
 
   function addClass(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const trainerName = newClass.trainer.split(" ")[0];
+    const isDuplicate = classes.some((item) => item.dateISO === newClass.date && item.time24 === newClass.time);
+    if (isDuplicate) {
+      notify("يوجد موعد مسجل في نفس التاريخ والوقت");
+      return;
+    }
     setClasses((current) => [{
       id: `CLS-${Date.now()}`,
       title: newClass.title,
-      date: new Date(newClass.date).toLocaleDateString("ar-SA-u-ca-gregory", { day: "numeric", month: "long" }),
-      time: newClass.time,
+      dateISO: newClass.date,
+      time24: newClass.time,
       duration: newClass.duration,
-      trainer: trainerName,
+      trainer: newClass.trainer,
       capacity: Number(newClass.capacity),
       booked: 0,
     }, ...current]);
@@ -2981,6 +3411,10 @@ function StudioManagementScreen({
 
   function addTrainer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (trainers.some((trainer) => trainer.name.trim() === newTrainer.name.trim())) {
+      notify("هذا المدرب مضاف مسبقًا");
+      return;
+    }
     setTrainers((current) => [...current, {
       id: `TR-${Date.now()}`,
       name: newTrainer.name,
@@ -3013,7 +3447,7 @@ function StudioManagementScreen({
 
       <main className="management-main">
         <div className="management-title-row">
-          <div><span>الاثنين، 3 أغسطس</span><h1>إدارة المركز</h1></div>
+          <div><span>{formatWeekday(addDaysISO(0))}، {formatDateLabel(addDaysISO(0))}</span><h1>إدارة المركز</h1></div>
           {activeTab === "classes" ? (
             <button className="primary-button" onClick={() => setPanel("class")} type="button"><CalendarPlus size={18} /> إضافة حصة</button>
           ) : activeTab === "trainers" ? (
@@ -3023,7 +3457,7 @@ function StudioManagementScreen({
 
         <nav className="management-tabs" aria-label="أقسام إدارة المركز">
           {tabs.map((tab) => (
-            <button className={activeTab === tab.id ? "active" : ""} key={tab.id} onClick={() => setActiveTab(tab.id)} type="button">
+            <button aria-current={activeTab === tab.id ? "page" : undefined} className={activeTab === tab.id ? "active" : ""} key={tab.id} onClick={() => setActiveTab(tab.id)} type="button">
               {tab.icon}<span>{tab.label}</span>
             </button>
           ))}
@@ -3034,7 +3468,7 @@ function StudioManagementScreen({
             <div className="management-toolbar">
               <div className="management-search"><Search size={18} /><input aria-label="بحث الحجوزات" placeholder="اسم العميل أو رقم الحجز" value={query} onChange={(event) => setQuery(event.target.value)} /></div>
               <div className="management-status-filters" aria-label="تصفية الحجوزات">
-                {["الكل", "مؤكد", "حضر", "لم يحضر", "ملغي"].map((status) => <button className={statusFilter === status ? "active" : ""} key={status} onClick={() => setStatusFilter(status)} type="button">{status}</button>)}
+                {["الكل", "مؤكد", "حضر", "لم يحضر", "ملغي"].map((status) => <button aria-pressed={statusFilter === status} className={statusFilter === status ? "active" : ""} key={status} onClick={() => setStatusFilter(status)} type="button">{status}</button>)}
               </div>
             </div>
             <div className="management-list-heading"><strong>{filteredBookings.length} حجوزات</strong><span>اضغط على الحجز لعرض التفاصيل وتحديث حالته</span></div>
@@ -3059,9 +3493,9 @@ function StudioManagementScreen({
           <section className="management-section">
             <div className="management-list-heading"><strong>الحصص القادمة</strong><span>المواعيد والسعة الحالية لكل حصة</span></div>
             <div className="management-class-list">
-              {classes.map((item) => (
+              {sortedClasses.map((item) => (
                 <article className="management-class-row" key={item.id}>
-                  <div className="management-class-time"><strong>{item.time}</strong><span>{item.date}</span></div>
+                  <div className="management-class-time"><strong>{formatTimeLabel(item.time24)}</strong><span>{formatDateLabel(item.dateISO)}</span></div>
                   <div><strong>{item.title}</strong><span>{item.duration} · المدرب {item.trainer}</span></div>
                   <div className="management-capacity"><span>{item.booked} من {item.capacity} مقاعد</span><i><b style={{ width: `${Math.min(100, (item.booked / item.capacity) * 100)}%` }} /></i></div>
                   <span className={item.booked >= item.capacity ? "class-full" : "class-open"}>{item.booked >= item.capacity ? "ممتلئة" : "متاحة"}</span>
@@ -3088,7 +3522,7 @@ function StudioManagementScreen({
       </main>
 
       {panel ? <div className="management-overlay">
-        <aside className="management-panel" role="dialog" aria-modal="true" aria-label={panel === "class" ? "إضافة حصة" : panel === "trainer" ? "إضافة مدرب" : "تفاصيل الحجز"}>
+        <aside className="management-panel" ref={panelRef} role="dialog" aria-modal="true" aria-label={panel === "class" ? "إضافة حصة" : panel === "trainer" ? "إضافة مدرب" : "تفاصيل الحجز"}>
           <div className="management-panel-header">
             <div><span>{panel === "booking" ? selectedBooking?.id : "Aura للمراكز"}</span><h2>{panel === "class" ? "إضافة حصة" : panel === "trainer" ? "إضافة مدرب" : "تفاصيل الحجز"}</h2></div>
             <button className="icon-button" onClick={() => setPanel(null)} type="button" aria-label="إغلاق"><X size={19} /></button>
@@ -3098,15 +3532,15 @@ function StudioManagementScreen({
             <div className="management-detail-person"><span className="management-trainer-avatar">{selectedBooking.customer.charAt(0)}</span><div><strong>{selectedBooking.customer}</strong><span>{selectedBooking.phone}</span></div></div>
             <dl><div><dt>الحصة</dt><dd>{selectedBooking.className}</dd></div><div><dt>الموعد</dt><dd>{selectedBooking.date}، {selectedBooking.time}</dd></div><div><dt>المدرب</dt><dd>{selectedBooking.trainer}</dd></div><div><dt>الدفع</dt><dd>{selectedBooking.payment}</dd></div></dl>
             <div className="management-status-actions">
-              <button className="primary-button" onClick={() => { updateBookingStatus(selectedBooking.id, "حضر"); setPanel(null); }} type="button"><CheckCircle2 size={18} /> تسجيل الحضور</button>
-              <button className="secondary-button" onClick={() => { updateBookingStatus(selectedBooking.id, "لم يحضر"); setPanel(null); }} type="button">لم يحضر</button>
-              <button className="ghost-button" onClick={() => { updateBookingStatus(selectedBooking.id, "ملغي"); setPanel(null); }} type="button">إلغاء الحجز</button>
+              <button className="primary-button" disabled={selectedBooking.status === "ملغي"} onClick={() => { updateBookingStatus(selectedBooking.id, "حضر"); setPanel(null); }} type="button"><CheckCircle2 size={18} /> تسجيل الحضور</button>
+              <button className="secondary-button" disabled={selectedBooking.status === "ملغي"} onClick={() => { updateBookingStatus(selectedBooking.id, "لم يحضر"); setPanel(null); }} type="button">لم يحضر</button>
+              <button className="ghost-button" disabled={selectedBooking.status === "ملغي"} onClick={() => { updateBookingStatus(selectedBooking.id, "ملغي"); setPanel(null); }} type="button">إلغاء الحجز</button>
             </div>
           </div> : null}
 
           {panel === "class" ? <form className="management-form" onSubmit={addClass}>
-            <label><span>اسم الحصة</span><input required value={newClass.title} onChange={(event) => setNewClass({ ...newClass, title: event.target.value })} /></label>
-            <div className="management-form-grid"><label><span>التاريخ</span><input required type="date" value={newClass.date} onChange={(event) => setNewClass({ ...newClass, date: event.target.value })} /></label><label><span>الوقت</span><input required type="time" value={newClass.time} onChange={(event) => setNewClass({ ...newClass, time: event.target.value })} /></label></div>
+            <label><span>نوع الحصة</span><select required value={newClass.title} onChange={(event) => setNewClass({ ...newClass, title: event.target.value })}>{sessions.filter((session) => session.studioId === "club-pilates-takhassusi").map((session) => <option key={session.id} value={session.title}>{session.title}</option>)}</select></label>
+            <div className="management-form-grid"><label><span>التاريخ</span><input min={addDaysISO(0)} required type="date" value={newClass.date} onChange={(event) => setNewClass({ ...newClass, date: event.target.value })} /></label><label><span>الوقت</span><input required type="time" value={newClass.time} onChange={(event) => setNewClass({ ...newClass, time: event.target.value })} /></label></div>
             <div className="management-form-grid"><label><span>المدة</span><select value={newClass.duration} onChange={(event) => setNewClass({ ...newClass, duration: event.target.value })}><option>45 دقيقة</option><option>50 دقيقة</option><option>60 دقيقة</option></select></label><label><span>عدد المقاعد</span><input min="1" required type="number" value={newClass.capacity} onChange={(event) => setNewClass({ ...newClass, capacity: event.target.value })} /></label></div>
             <label><span>المدرب</span><select value={newClass.trainer} onChange={(event) => setNewClass({ ...newClass, trainer: event.target.value })}>{trainers.map((trainer) => <option key={trainer.id}>{trainer.name}</option>)}</select></label>
             <button className="primary-button full" type="submit"><Plus size={18} /> إضافة الحصة</button>
@@ -3115,7 +3549,7 @@ function StudioManagementScreen({
           {panel === "trainer" ? <form className="management-form" onSubmit={addTrainer}>
             <label><span>اسم المدرب</span><input required value={newTrainer.name} onChange={(event) => setNewTrainer({ ...newTrainer, name: event.target.value })} placeholder="الاسم الكامل" /></label>
             <label><span>التخصص</span><input required value={newTrainer.specialty} onChange={(event) => setNewTrainer({ ...newTrainer, specialty: event.target.value })} placeholder="مثال: Reformer Pilates" /></label>
-            <label><span>رقم التواصل</span><input inputMode="numeric" maxLength={10} pattern="[0-9]{10}" value={newTrainer.phone} onChange={(event) => setNewTrainer({ ...newTrainer, phone: normalizePhoneDigits(event.target.value) })} placeholder="05X XXX XXXX" /></label>
+            <label><span>رقم التواصل</span><input inputMode="numeric" maxLength={10} minLength={10} pattern="[0-9]{10}" required value={newTrainer.phone} onChange={(event) => setNewTrainer({ ...newTrainer, phone: normalizePhoneDigits(event.target.value) })} placeholder="05X XXX XXXX" /></label>
             <button className="primary-button full" type="submit"><UserPlus size={18} /> إضافة المدرب</button>
           </form> : null}
         </aside>
@@ -3148,7 +3582,7 @@ function AccountScreen({
       />
 
       <div className="profile-card">
-        <div className="avatar">ح</div>
+        <div className="avatar">{actions.userProfile.fullName.trim().charAt(0) || "A"}</div>
         <div>
           <strong>{actions.userProfile.fullName}</strong>
           <span>عضو Aura</span>
@@ -3201,7 +3635,7 @@ function ProfileScreen({
     <div className="screen-content account-detail-screen">
       <AccountDetailHeader title="الملف الشخصي" subtitle="بياناتك الأساسية" onBack={() => onGo("account")} />
       <div className="profile-identity">
-        <span className="avatar">ح</span>
+        <span className="avatar">{profile.fullName.trim().charAt(0) || "A"}</span>
         <div><strong>{profile.fullName}</strong><span>يمكنك تحديث بياناتك في أي وقت</span></div>
       </div>
       <form className="account-form" onSubmit={saveProfile}>
@@ -3324,6 +3758,8 @@ function NotificationsScreen({
   actions: AuraActions;
   onGo: (screen: Screen) => void;
 }) {
+  const latestBooking = actions.bookings.find((booking) => booking.status === "confirmed");
+  const latestSession = latestBooking ? getSessionById(latestBooking.sessionId) : null;
   return (
     <div className="screen-content account-detail-screen">
       <AccountDetailHeader title="الإشعارات" subtitle="التحديثات والتنبيهات" onBack={() => onGo("home")} />
@@ -3332,8 +3768,10 @@ function NotificationsScreen({
         <input checked={actions.notificationsEnabled} onChange={(event) => { actions.setNotificationsEnabled(event.target.checked); actions.notify(event.target.checked ? "تم تفعيل الإشعارات" : "تم إيقاف الإشعارات"); }} type="checkbox" />
       </label>
       <div className="notification-list">
-        <article><span className="notification-icon"><TicketCheck size={18} /></span><div><strong>حجزك مؤكد</strong><p>جلسة Pilates Reformer اليوم الساعة 7:00 مساء.</p><small>منذ ساعتين</small></div></article>
-        <article><span className="notification-icon"><Clock3 size={18} /></span><div><strong>تذكير بموعدك</strong><p>نذكرك بالحضور قبل الجلسة بـ 10 دقائق.</p><small>أمس</small></div></article>
+        {latestBooking && latestSession ? <>
+          <article><span className="notification-icon"><TicketCheck size={18} /></span><div><strong>حجزك مؤكد</strong><p>جلسة {latestSession.title} {latestBooking.weekday} الساعة {latestBooking.time}.</p><small>آخر تحديث</small></div></article>
+          <article><span className="notification-icon"><Clock3 size={18} /></span><div><strong>تذكير بموعدك</strong><p>ننصح بالحضور قبل الجلسة بـ 10 دقائق.</p><small>{latestBooking.dateLabel}</small></div></article>
+        </> : <div className="empty-state compact"><Bell size={24} /><strong>لا توجد إشعارات حجز</strong><span>ستظهر التأكيدات والتذكيرات هنا.</span></div>}
       </div>
     </div>
   );
@@ -3348,7 +3786,7 @@ function AccountDetailHeader({
   subtitle: string;
   title: string;
 }) {
-  return <AppHeader title={title} subtitle={subtitle} action={<ChevronLeft size={18} />} actionLabel="رجوع" onAction={onBack} />;
+  return <AppHeader title={title} subtitle={subtitle} action={<ChevronRight size={18} />} actionLabel="رجوع" backAction onAction={onBack} />;
 }
 
 function AppHeader({
@@ -3356,21 +3794,24 @@ function AppHeader({
   subtitle,
   action,
   actionLabel,
+  backAction = false,
   onAction,
 }: {
   title: string;
   subtitle: string;
   action?: ReactNode;
   actionLabel?: string;
+  backAction?: boolean;
   onAction?: () => void;
 }) {
   return (
-    <header className="app-header">
+    <header className={backAction ? "app-header detail-app-header" : "app-header"}>
+      {backAction && action && onAction ? <button className="icon-button" onClick={onAction} type="button" aria-label={actionLabel ?? title} title={actionLabel ?? title}>{action}</button> : null}
       <div>
         <p>{subtitle}</p>
         <h2>{title}</h2>
       </div>
-      {action ? <button
+      {!backAction && action && onAction ? <button
         className="icon-button"
         onClick={onAction}
         type="button"
@@ -3407,6 +3848,7 @@ function BottomNav({
       {navItems.map((item) => (
         <button
           className={current === item.id || (item.id === "account" && accountScreens.includes(current)) ? "active" : ""}
+          aria-current={current === item.id || (item.id === "account" && accountScreens.includes(current)) ? "page" : undefined}
           key={item.id}
           onClick={() => onGo(item.id)}
           type="button"
@@ -3431,9 +3873,7 @@ function SectionTitle({
   return (
     <div className="section-title">
       <h3>{title}</h3>
-      <button onClick={onAction} type="button">
-        {action}
-      </button>
+      {onAction ? <button onClick={onAction} type="button">{action}</button> : <span>{action}</span>}
     </div>
   );
 }
@@ -3448,12 +3888,12 @@ function LocationPrompt({
   const statusCopy: Record<LocationStatus, { title: string; description: string; action: string }> = {
     denied: {
       title: "الموقع غير مفعل",
-      description: "فعّل إذن الموقع من المتصفح لنقترح المراكز الأقرب لك.",
+      description: "فعّل إذن الموقع من المتصفح لترتيب المراكز حسب المسافة المباشرة.",
       action: "حاول مجددًا",
     },
     idle: {
       title: "اقترح الأقرب لك",
-      description: "استخدم موقعك لترتيب مراكز الرياض حسب المسافة.",
+      description: "استخدم موقعك لترتيب مراكز الرياض حسب المسافة المباشرة، وليس مسار القيادة.",
       action: "استخدم موقعي",
     },
     loading: {
@@ -3463,7 +3903,7 @@ function LocationPrompt({
     },
     ready: {
       title: "تم ترتيب النتائج",
-      description: "المراكز المعروضة الآن مرتبة حسب الأقرب إلى موقعك.",
+      description: "المراكز مرتبة حسب المسافة المباشرة؛ زر الاتجاهات يعرض مسار القيادة.",
       action: "تحديث موقعي",
     },
     unsupported: {
@@ -3505,10 +3945,11 @@ function SessionCard({
 }) {
   return (
     <button className="session-card" onClick={() => onSelect(session.id)} type="button">
-      <div
+      <img
         className="session-image"
-        style={coverImageStyle(session.image)}
-        aria-hidden="true"
+        src={session.image}
+        alt=""
+        loading="lazy"
       />
       <div className="session-copy">
         <div className="session-topline">
@@ -3546,10 +3987,11 @@ function StudioResultCard({
       onClick={() => onSelect(studio.id)}
       type="button"
     >
-      <div
+      <img
         className="studio-result-image"
-        style={coverImageStyle(studio.image)}
-        aria-hidden="true"
+        src={studio.image}
+        alt=""
+        loading="lazy"
       />
       <div className="studio-result-copy">
         <div className="studio-line">
@@ -3605,6 +4047,7 @@ function FilterGroup({
         {options.map((option) => (
           <button
             className={value === option ? "selected" : ""}
+            aria-pressed={value === option}
             key={option}
             onClick={() => onChange(option)}
             type="button"
@@ -3649,7 +4092,7 @@ function PriceLine({
   );
 }
 
-function buildScheduleDays() {
+function buildScheduleDays(): ScheduleDay[] {
   const weekdayFormatter = new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
     weekday: "short",
   });
@@ -3668,6 +4111,8 @@ function buildScheduleDays() {
       weekday: weekdayFormatter.format(date),
       date: dayFormatter.format(date),
       month: monthFormatter.format(date),
+      iso: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
+      label: new Intl.DateTimeFormat("ar-SA-u-ca-gregory", { day: "numeric", month: "long" }).format(date),
     };
   });
 }

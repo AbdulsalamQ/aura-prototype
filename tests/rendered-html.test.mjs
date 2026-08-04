@@ -55,7 +55,41 @@ test("uses the approved Aura identity assets", async () => {
   assert.match(page, /function SplashScreen/);
   assert.match(page, /prefers-reduced-motion: reduce/);
   assert.match(page, /setShowSplash\(false\)/);
-  assert.match(page, /screen !== "login" \? <BottomNav/);
+  assert.match(page, /\["home", "explore", "studio", "bookings", "account"/);
+  assert.match(page, /\? <BottomNav current=\{screen\} onGo=\{go\} \/>/);
+  assert.doesNotMatch(page, /\["schedule", "session", "checkout", "payment", "success"\]\.includes\(screen\)/);
+});
+
+test("keeps the booking draft, customer bookings, and studio capacity in sync", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /type BookingDraft =/);
+  assert.match(page, /dateISO: string/);
+  assert.match(page, /time24: string/);
+  assert.match(page, /function getTimeSlots/);
+  assert.match(page, /const \[bookings, setBookings\]/);
+  assert.match(page, /const \[managedClasses, setManagedClasses\]/);
+  assert.match(page, /aura-prototype-state-v2/);
+  assert.match(page, /setManagedBookings\(\(current\) =>/);
+  assert.match(page, /booked: Math\.min\(item\.capacity, item\.booked \+ 1\)/);
+  assert.match(page, /QRCodeSVG/);
+  assert.doesNotMatch(page, /buildCandidateSession/);
+});
+
+test("labels prototype-only authentication and payment honestly", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /نسخة تجريبية/);
+  assert.match(page, /لن يتم خصم مبلغ حقيقي/);
+  assert.match(page, /const \[acceptedTerms, setAcceptedTerms\] = useState\(false\)/);
+});
+
+test("starts each destination screen from the top", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /document\.querySelectorAll<HTMLElement>\("\.app-screen, \.desktop-view"\)/);
+  assert.match(page, /container\.scrollTo\(\{ top: 0, left: 0, behavior: "auto" \}\)/);
+  assert.match(page, /\}, \[screen\]\)/);
 });
 
 test("routes the two prototype phone numbers to their intended experiences", async () => {

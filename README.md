@@ -39,6 +39,14 @@ npm run package:github
 ## Current Prototype
 
 - The signed-in prototype user is `حصة الدويغري`.
+- Customer login: `0511111111`.
+- Studio login: `0500000000`.
 - The explore screen opens a studio profile before booking.
 - The booking screen shows upcoming days, repeated month labels, and booked time
   slots as unavailable.
+- Customer bookings and Club Pilates class capacity stay synchronized with the
+  studio management screen and persist locally in the browser.
+- The studio experience manages bookings, class times, and trainers.
+- Payments and phone verification are clearly labeled simulations. Production
+  use still requires a backend, OTP provider, payment gateway, and shared
+  database.

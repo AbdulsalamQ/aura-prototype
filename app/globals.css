@@ -2393,7 +2393,7 @@ button.favorite-item-main {
     0 6px 16px rgba(48, 73, 64, 0.055);
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1024px) {
   .desktop-shell {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 274px;
@@ -2409,7 +2409,7 @@ button.favorite-item-main {
   }
 }
 
-@media (min-width: 900px) and (max-width: 1120px) {
+@media (min-width: 1024px) and (max-width: 1120px) {
   .desktop-session-grid,
   .desktop-studio-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3173,7 +3173,7 @@ input:focus-visible {
   background: #edf4f0;
 }
 
-@media (max-width: 899px) {
+@media (max-width: 1023px) {
   .app-shell {
     grid-template-rows: minmax(0, 1fr);
   }
@@ -4377,7 +4377,7 @@ input:focus-visible {
   background-position: center 42%;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1024px) {
   .desktop-shell.login-mode {
     grid-template-columns: minmax(0, 1fr);
     direction: rtl;
@@ -4433,7 +4433,7 @@ input:focus-visible {
   }
 }
 
-@media (min-width: 900px) and (max-height: 760px) {
+@media (min-width: 1024px) and (max-height: 760px) {
   .desktop-auth-experience {
     padding-block: 22px;
   }
@@ -4451,7 +4451,7 @@ input:focus-visible {
   }
 }
 
-@media (max-width: 899px) {
+@media (max-width: 1023px) {
   .mobile-shell.login-mode {
     grid-template-rows: minmax(0, 1fr);
   }
@@ -4572,4 +4572,187 @@ input:focus-visible {
 
 .desktop-account-grid .logout-row {
   grid-column: 1 / -1;
+}
+
+/* Logical flow refinements */
+.section-title > span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.detail-app-header {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+}
+
+.detail-app-header > .icon-button {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.detail-app-header > div {
+  grid-column: 2;
+  grid-row: 1;
+  text-align: center;
+}
+
+.desktop-tile-image,
+.desktop-studio-thumb,
+.session-image,
+.studio-result-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+}
+
+.desktop-session-tile > div:not(.desktop-tile-image) span,
+.desktop-session-tile > div:not(.desktop-tile-image) strong,
+.desktop-session-tile > div:not(.desktop-tile-image) p {
+  display: block;
+}
+
+.desktop-session-tile > div:not(.desktop-tile-image) {
+  min-width: 0;
+}
+
+.desktop-session-tile strong,
+.desktop-session-tile p,
+.desktop-session-tile span {
+  unicode-bidi: plaintext;
+}
+
+.studio-session-options,
+.booking-list,
+.desktop-booking-list {
+  display: grid;
+  gap: 10px;
+}
+
+.session-option {
+  width: 100%;
+  min-height: 66px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-solid);
+  padding: 12px 14px;
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+}
+
+.session-option span,
+.session-option strong,
+.session-option small {
+  display: block;
+}
+
+.session-option small,
+.booking-reference {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.session-option b {
+  flex: 0 0 auto;
+  color: var(--sage-dark);
+  font-size: 14px;
+}
+
+.studio-booking-section {
+  margin-bottom: 18px;
+}
+
+.booking-card h3,
+.desktop-booking-card h3 {
+  margin: 12px 0 4px;
+  font-size: 21px;
+}
+
+.booking-card,
+.desktop-booking-card {
+  padding: 18px;
+}
+
+.status-pill.cancelled,
+.status-pill.no-show {
+  background: color-mix(in srgb, var(--clay) 12%, var(--surface-solid));
+  color: var(--clay);
+}
+
+.status-pill.completed {
+  background: color-mix(in srgb, var(--sage-dark) 12%, var(--surface-solid));
+}
+
+.cancel-confirmation {
+  display: grid;
+  gap: 5px;
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.cancel-confirmation > span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ghost-button.danger {
+  color: var(--clay);
+}
+
+.empty-state.compact {
+  min-height: 150px;
+}
+
+.qr-box {
+  width: 212px;
+  height: 212px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  place-items: center;
+  border-width: 12px;
+  color: var(--ink);
+}
+
+.compact-actions {
+  align-items: center;
+  margin-top: 0;
+}
+
+.compact-actions > button {
+  flex: 0 0 auto;
+  min-height: 40px;
+}
+
+.legal-details {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.legal-details summary {
+  color: var(--sage-dark);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.legal-details p {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .session-option {
+    background: var(--surface-solid);
+  }
 }
